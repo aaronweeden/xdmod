@@ -105,16 +105,24 @@ class WarehouseExportControllerProvider extends BaseControllerProvider
             $user = $this->authorize($request);
         }
 
+        $includeDataTypes = $this->getBooleanParam(
+            $request,
+            'includeDataTypes',
+            false
+        );
 
         $config = RawStatisticsConfiguration::factory();
 
         $realms = array_map(
-            function ($realm) use ($config) {
+            function ($realm) use ($config, $includeDataTypes) {
                 $name = $realm->getName();
                 return [
                     'id' => $name,
                     'name' => $realm->getDisplay(),
-                    'fields' => $config->getBatchExportFieldDefinitions($name)
+                    'fields' => $config->getBatchExportFieldDefinitions(
+                        $name,
+                        $includeDataTypes
+                    )
                 ];
             },
             $this->realmManager->getRealmsForUser($user)

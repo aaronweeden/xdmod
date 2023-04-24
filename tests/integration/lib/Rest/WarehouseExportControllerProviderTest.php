@@ -208,7 +208,27 @@ class WarehouseExportControllerProviderTest extends BaseTest
                     $token,
                     'get_realms.spec',
                     200,
-                    'integration/rest/warehouse/export',
+                    self::TEST_GROUP,
+                    'schema'
+                );
+                $tokenHelper->setParams(array(
+                    'includeDataTypes' => 'asdf'
+                ));
+                $tokenHelper->runEndpointTest(
+                    $token,
+                    'get_realms_with_data_types_invalid',
+                    400,
+                    self::TEST_GROUP,
+                    'exact'
+                );
+                $tokenHelper->setParams(array(
+                    'includeDataTypes' => 'true'
+                ));
+                $tokenHelper->runEndpointTest(
+                    $token,
+                    'get_realms_with_data_types_success.spec',
+                    200,
+                    self::TEST_GROUP,
                     'schema'
                 );
             }

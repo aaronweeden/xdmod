@@ -244,6 +244,7 @@
           {
               "name": "Start Date",
               "formula" : "(SELECT MIN(sr2.start_time) FROM modw_cloud.session_records AS sr2 WHERE sr2.instance_id = sr.instance_id)",
+              "type": "datetime",
               "group": "Administration",
               "documentation": "The start date of a VM.",
               "batchExport": true

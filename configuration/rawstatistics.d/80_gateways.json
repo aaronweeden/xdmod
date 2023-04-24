@@ -102,6 +102,7 @@
             {
                 "name": "Local Job Id",
                 "formula": "IF(jt.local_job_array_index = -1, jt.local_jobid, CONCAT(jt.local_jobid, '[', jt.local_job_array_index, ']'))",
+                "type": "varchar(32)",
                 "group": "Administration",
                 "documentation": "The unique identifier assigned to the job by the job scheduler.",
                 "batchExport": true

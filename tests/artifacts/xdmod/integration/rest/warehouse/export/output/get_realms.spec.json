@@ -93,8 +93,7 @@
                 "display",
                 "anonymize",
                 "documentation"
-            ],
-            "additionalProperties": false
+            ]
         }
     }
 }

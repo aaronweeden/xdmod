@@ -2654,6 +2654,17 @@
                 ],
                 "summary": "Get list of realms available for data export",
                 "operationId": "get-warehouse-export-realms",
+                "parameters": [
+                    {
+                        "name": "includeDataTypes",
+                        "in": "query",
+                        "description": "Whether to include the data types of fields in the response.",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of realms",
@@ -2705,8 +2716,19 @@
                                                                 "documentation": {
                                                                     "description": "Field description",
                                                                     "type": "string"
+                                                                },
+                                                                "dataType": {
+                                                                    "description": "Data type of field",
+                                                                    "type": "string"
                                                                 }
-                                                            }
+                                                            },
+                                                            "required": [
+                                                                "name",
+                                                                "alias",
+                                                                "display",
+                                                                "anonymize",
+                                                                "documentation"
+                                                            ]
                                                         }
                                                     }
                                                 }

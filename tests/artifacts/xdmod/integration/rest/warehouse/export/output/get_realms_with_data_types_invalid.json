@@ -1,0 +1,4 @@
+{
+    "$extends": "${INTEGRATION_ROOT}/base/error.json",
+    "message": "Invalid value for includeDataTypes. Must be a(n) boolean."
+}

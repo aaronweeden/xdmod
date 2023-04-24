@@ -3,6 +3,7 @@
 namespace DataWarehouse\Data;
 
 use Configuration\XdmodConfiguration;
+use CCR\DB;
 use ETL\VariableStore;
 use Exception;
 
@@ -191,11 +192,19 @@ class RawStatisticsConfiguration
      * Get batch export field definitions.
      *
      * @param string $realm The name of a realm.
+     * @param bool $includeDataTypes Whether to include the data types of
+     *                               fields in the response.
      * @return array[]
      */
-    public function getBatchExportFieldDefinitions($realm)
-    {
+    public function getBatchExportFieldDefinitions(
+        $realm,
+        $includeDataTypes = null
+    ) {
         $fields = [];
+
+        if ($includeDataTypes) {
+            $dataTypes = $this->getDataTypesOfAllColumnsInTables($realm);
+        }
 
         foreach ($this->getQueryFieldDefinitions($realm) as $field) {
             // Skip "ignore" and "analysis" dtype
@@ -222,15 +231,56 @@ class RawStatisticsConfiguration
                 $display .= ' (Deidentified)';
             }
 
-            $fields[] = [
+            $fieldDefinition = [
                 'name' => $field['name'],
                 'alias' => isset($field['alias']) ? $field['alias'] : $field['name'],
                 'display' => $display,
                 'anonymize' => ($export === 'anonymize'),
                 'documentation' => $field['documentation']
             ];
+
+            if ($includeDataTypes) {
+                $fieldDefinition['dataType'] = (
+                    isset($field['formula'])
+                    ? $field['type']
+                    : $dataTypes[$field['tableAlias']][$field['column']]
+                );
+            }
+
+            $fields[] = $fieldDefinition;
         }
 
         return $fields;
+    }
+
+    private function getDataTypesOfAllColumnsInTables($realm)
+    {
+        $dataTypes = [];
+        $tables = $this->getQueryTableDefinitions($realm);
+        foreach ($tables as $table) {
+            $dataTypes[$table['alias']] =
+                self::getDataTypesOfAllColumnsInTable($table);
+        }
+        return $dataTypes;
+    }
+
+    private static function getDataTypesOfAllColumnsInTable($table)
+    {
+        $dataTypes = [];
+        $db = DB::factory('datawarehouse');
+        $results = $db->query(
+            'SELECT column_name, column_type'
+            . " FROM information_schema.columns"
+            . ' WHERE table_schema = :table_schema'
+            . ' AND table_name = :table_name',
+            [
+                ':table_schema' => $table['schema'],
+                ':table_name' => $table['name']
+            ]
+        );
+        foreach ($results as $result) {
+            $dataTypes[$result['column_name']] = $result['column_type'];
+        }
+        return $dataTypes;
     }
 }
