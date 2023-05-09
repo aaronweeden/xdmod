@@ -199,7 +199,7 @@ class WarehouseExportControllerProviderTest extends TokenAuthTest
     }
 
     /**
-     * @see TokenAuthTest::provideTokenAuthTestDataWithMultipleKeys()
+     * dataProvider for @see testGetRealmsTokenAuth().
      */
     public function provideGetRealmsTokenAuth()
     {
