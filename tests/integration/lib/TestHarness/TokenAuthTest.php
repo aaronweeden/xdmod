@@ -295,9 +295,7 @@ abstract class TokenAuthTest extends BaseTest
         unset($input['$path']);
         $testKeys = array_keys($input);
 
-        // Build the arrays of test data — one for each role, token type, and,
-        // if the token type is valid, test key (for error token types, the
-        // test key is only 'defaults').
+        // Build the arrays of test data.
         $testData = [];
         foreach (self::provideTokenAuthTestData() as $roleAndTokenType) {
             list($role, $tokenType) = $roleAndTokenType;
