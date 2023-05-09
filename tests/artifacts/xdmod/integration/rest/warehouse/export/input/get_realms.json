@@ -1,0 +1,26 @@
+{
+    "defaults": {
+        "path": "rest/warehouse/export/realms",
+        "method": "get",
+        "params": null,
+        "data": null,
+        "endpoint_type": "rest",
+        "authentication_type": "token_optional"
+    },
+    "include_data_types_invalid": {
+        "$ref-with-overwrite": "get_realms.json#/defaults",
+        "$overwrite": {
+            "params": {
+                "includeDataTypes": "asdf"
+            }
+        }
+    },
+    "include_data_types_success": {
+        "$ref-with-overwrite": "get_realms.json#/defaults",
+        "$overwrite": {
+            "params": {
+                "includeDataTypes": "true"
+            }
+        }
+    }
+}

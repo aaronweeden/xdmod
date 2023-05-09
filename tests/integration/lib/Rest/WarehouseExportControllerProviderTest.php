@@ -5,11 +5,10 @@ namespace IntegrationTests\Rest;
 use CCR\DB;
 use DataWarehouse\Export\FileManager;
 use DataWarehouse\Export\QueryHandler;
-use IntegrationTests\BaseTest;
+use TestHarness\TokenAuthTest;
 use JsonSchema\Constraints\Constraint;
 use JsonSchema\Validator;
 use PHPUnit_Framework_TestCase;
-use TestHarness\TokenHelper;
 use TestHarness\XdmodTestHelper;
 use XDUser;
 
@@ -18,12 +17,12 @@ use XDUser;
  *
  * @coversDefaultClass \Rest\Controllers\WarehouseExportControllerProvider
  */
-class WarehouseExportControllerProviderTest extends BaseTest
+class WarehouseExportControllerProviderTest extends TokenAuthTest
 {
     /**
-     * Test files base path.
+     * Directory containing test artifact files.
      */
-    const TEST_GROUP = 'integration/rest/warehouse/export';
+    private static $TEST_GROUP = 'integration/rest/warehouse/export';
 
     /**
      * User roles and usernames.
@@ -187,55 +186,27 @@ class WarehouseExportControllerProviderTest extends BaseTest
 
     /**
      * @covers ::getRealms
-     * @dataProvider provideBaseRoles
+     * @dataProvider provideGetRealmsTokenAuth
      */
-    public function testGetRealms($role)
-    {
-        $tokenHelper = new TokenHelper(
-            $this,
-            self::$helpers[$role],
+    public function testGetRealmsTokenAuth($role, $tokenType, $testKey) {
+        parent::runTokenAuthTest(
             $role,
-            'rest/warehouse/export/realms',
-            'get',
-            null,
-            null,
-            'rest',
-            'token_optional'
+            $tokenType,
+            self::$TEST_GROUP,
+            'get_realms',
+            $testKey
         );
-        $tokenHelper->runEndpointTests(
-            function ($token) use ($tokenHelper) {
-                $tokenHelper->runEndpointTest(
-                    $token,
-                    'get_realms.spec',
-                    200,
-                    self::TEST_GROUP,
-                    'schema'
-                );
-                $tokenHelper->setParams(array(
-                    'includeDataTypes' => 'asdf'
-                ));
-                $tokenHelper->runEndpointTest(
-                    $token,
-                    'get_realms_with_data_types_invalid',
-                    400,
-                    self::TEST_GROUP,
-                    'exact'
-                );
-                $tokenHelper->setParams(array(
-                    'includeDataTypes' => 'true'
-                ));
-                $tokenHelper->runEndpointTest(
-                    $token,
-                    'get_realms_with_data_types_success.spec',
-                    200,
-                    self::TEST_GROUP,
-                    'schema'
-                );
-            }
+    }
+
+    /**
+     * @see TokenAuthTest::provideTokenAuthTestDataWithMultipleKeys()
+     */
+    public function provideGetRealmsTokenAuth()
+    {
+        return TokenAuthTest::provideTokenAuthTestDataWithMultipleKeys(
+            self::$TEST_GROUP,
+            'get_realms'
         );
-        if ('pub' !== $role) {
-            self::$helpers[$role]->authenticate($role);
-        }
     }
 
     /**
@@ -415,26 +386,26 @@ class WarehouseExportControllerProviderTest extends BaseTest
 
     public function createRequestProvider()
     {
-        return parent::getTestFiles()->loadJsonFile(self::TEST_GROUP, 'create-request', 'input');
+        return parent::getTestFiles()->loadJsonFile(self::$TEST_GROUP, 'create-request', 'input');
     }
 
     public function getRequestsProvider()
     {
-        return parent::getTestFiles()->loadJsonFile(self::TEST_GROUP, 'get-requests', 'input');
+        return parent::getTestFiles()->loadJsonFile(self::$TEST_GROUP, 'get-requests', 'input');
     }
 
     public function getRequestProvider()
     {
-        return parent::getTestFiles()->loadJsonFile(self::TEST_GROUP, 'get-request', 'input');
+        return parent::getTestFiles()->loadJsonFile(self::$TEST_GROUP, 'get-request', 'input');
     }
 
     public function deleteRequestProvider()
     {
-        return parent::getTestFiles()->loadJsonFile(self::TEST_GROUP, 'delete-request', 'input');
+        return parent::getTestFiles()->loadJsonFile(self::$TEST_GROUP, 'delete-request', 'input');
     }
 
     public function deleteRequestsProvider()
     {
-        return parent::getTestFiles()->loadJsonFile(self::TEST_GROUP, 'delete-requests', 'input');
+        return parent::getTestFiles()->loadJsonFile(self::$TEST_GROUP, 'delete-requests', 'input');
     }
 }

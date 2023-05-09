@@ -1,0 +1,157 @@
+{
+    "defaults": {
+        "status_code": 200,
+        "body": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "get_realms_default_body",
+            "allOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "success": {
+                            "type": "boolean",
+                            "enum": [ true ]
+                        },
+                        "data": {
+                            "type": "array",
+                            "items": { "$ref": "#/$defs/realm" },
+                            "minItems": 2,
+                            "maxItems": 2,
+                            "uniqueItems": true
+                        },
+                        "total": {
+                            "type": "number",
+                            "enum": [ 2 ]
+                        }
+                    },
+                    "required": [ "success", "data", "total" ],
+                    "additionalProperties": false
+                },
+                { "$ref": "#/$defs/jobs_realm" },
+                { "$ref": "#/$defs/cloud_realm" }
+            ],
+            "$defs": {
+                "realm": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "fields": { "$ref": "#/$defs/fields" }
+                    },
+                    "required": [ "id", "name", "fields" ],
+                    "additionalProperties": false
+                },
+                "jobs_realm": {
+                    "properties": {
+                        "data": {
+                            "contains": {
+                                "properties": {
+                                    "id": { "enum": [ "Jobs" ] },
+                                    "name": { "enum": [ "Jobs" ] },
+                                    "fields": {
+                                        "minItems": 28,
+                                        "maxItems": 28
+                                    }
+                                }
+                            },
+                            "minContains": 1,
+                            "maxContains": 1
+                        }
+                    }
+                },
+                "cloud_realm": {
+                    "properties": {
+                        "data": {
+                            "contains": {
+                                "properties": {
+                                    "id": { "enum": [ "Cloud" ] },
+                                    "name": { "enum": [ "Cloud" ] },
+                                    "fields": {
+                                        "minItems": 16,
+                                        "maxItems": 16
+                                    }
+                                }
+                            },
+                            "minContains": 1,
+                            "maxContains": 1
+                        }
+                    }
+                },
+                "fields": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/field" },
+                    "uniqueItems": true
+                },
+                "field": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "alias": { "type": "string" },
+                        "display": { "type": "string" },
+                        "anonymize": { "type": "boolean" },
+                        "documentation": { "type": "string" }
+                    },
+                    "required": [
+                        "name",
+                        "alias",
+                        "display",
+                        "anonymize",
+                        "documentation"
+                    ]
+                }
+            }
+        }
+    },
+    "include_data_types_invalid": {
+        "status_code": 400,
+        "body": {
+            "$ref-with-overwrite": "${INTEGRATION_ROOT}/base/error_body.json",
+            "$overwrite": {
+                "message": "Invalid value for includeDataTypes. Must be a(n) boolean."
+            }
+        }
+    },
+    "include_data_types_success": {
+        "status_code": 200,
+        "body": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "get_realms_include_data_types_success_body",
+            "allOf": [
+                { "$ref": "get_realms.json#/defaults/body" },
+                {
+                    "properties": {
+                        "data": {
+                            "items": { "$ref": "#/$defs/realm" }
+                        }
+                    }
+                }
+            ],
+            "$defs": {
+                "realm": {
+                    "properties": {
+                        "fields": { "$ref": "#/$defs/fields" }
+                    }
+                },
+                "fields": {
+                    "items": { "$ref": "#/$defs/field" }
+                },
+                "field": {
+                    "properties": {
+                        "dataType": { "$ref": "#/$defs/dataType" }
+                    },
+                    "required": [ "dataType" ]
+                },
+                "dataType": {
+                    "type": "string",
+                    "oneOf": [
+                        { "pattern": "^varchar\\(\\d+\\)$" },
+                        { "pattern": "^int\\(\\d+\\)$" },
+                        { "pattern": "^int\\(\\d+\\) unsigned$" },
+                        { "pattern": "^decimal\\(\\d+,\\d+\\)$" },
+                        { "pattern": "^datetime$" }
+                    ]
+                }
+            }
+        }
+    }
+}
