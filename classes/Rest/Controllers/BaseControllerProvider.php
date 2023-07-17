@@ -211,9 +211,18 @@ abstract class BaseControllerProvider implements ControllerProviderInterface
      */
     public function authorize(Request $request, array $requirements = array())
     {
-
         $user = $this->getUserFromRequest($request);
+        $user = $this->authorizeUser($user, $requirements);
+        return $user;
+    }
 
+    /**
+     * @see authorize()
+     */
+    protected function authorizeUser(
+        \XDUser $user,
+        array $requirements = array()
+    ) {
         // If role requirements were not given, then the only check to perform
         // is that the user is not a public user.
         $isPublicUser = $user->isPublicUser();
