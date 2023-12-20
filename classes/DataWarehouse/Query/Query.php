@@ -100,6 +100,7 @@ class Query extends Loggable
 
     protected $aggregationUnitName = null;
 
+    private $joins = array();
     private $leftJoins = array();
 
     /**
@@ -428,6 +429,11 @@ class Query extends Loggable
         return $this->_tables;
     }
 
+    public function addJoin(\DataWarehouse\Query\Model\Table $table, \DataWarehouse\Query\Model\WhereCondition $where)
+    {
+        $this->joins[$table->getAlias()->getName()] = array($table, $where);
+    }
+
     public function addLeftJoin(\DataWarehouse\Query\Model\Table $table, \DataWarehouse\Query\Model\WhereCondition $where)
     {
         $this->leftJoins[$table->getAlias()->getName()] = array($table, $where);
@@ -731,7 +737,7 @@ SQL;
 SELECT%s
   %s
 FROM
-  %s%s
+  %s%s%s
 WHERE
   %s
 %s%s%s%s
@@ -742,6 +748,7 @@ SQL;
             ( $this->isDistinct ? ' DISTINCT' : '' ),
             implode(",\n  ", $select_fields),
             implode(",\n  ", $select_tables),
+            ( "" == $this->getJoinSql() ? "" : "\n" . $this->getJoinSql() ),
             ( "" == $this->getLeftJoinSql() ? "" : "\n" . $this->getLeftJoinSql() ),
             implode("\n  AND ", $wheres),
             ( count($groups) > 0 ? "GROUP BY " . implode(",\n  ", $groups) : "" ),
@@ -850,12 +857,22 @@ SQL;
         $this->roleParameterDescriptions = $other->roleParameterDescriptions;
     }
 
+    protected function getJoinSql()
+    {
+        $stmt = '';
+        foreach ($this->joins as $joincond) {
+            $stmt .= ' JOIN ' . $joincond[0]->getQualifiedName(true, true) .
+                ' ON ' . $joincond[1] . "\n";
+        }
+        return $stmt;
+    }
+
     protected function getLeftJoinSql()
     {
         $stmt = '';
         foreach ($this->leftJoins as $joincond) {
             $stmt .= ' LEFT JOIN ' . $joincond[0]->getQualifiedName(true, true) .
-                ' ON ' . $joincond[1];
+                ' ON ' . $joincond[1] . "\n";
         }
         return $stmt;
     }

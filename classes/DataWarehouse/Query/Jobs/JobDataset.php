@@ -39,14 +39,17 @@ class JobDataset extends \DataWarehouse\Query\RawQuery
                 $alias
             );
             $tables[$alias] = $table;
-            $this->addTable($table);
-
             $join = $tableDef['join'];
-            $this->addWhereCondition(new WhereCondition(
+            $where = new WhereCondition(
                 new TableField($table, $join['primaryKey']),
                 '=',
                 new TableField($tables[$join['foreignTableAlias']], $join['foreignKey'])
-            ));
+            );
+            if (array_key_exists('type', $join) && 'left' === $join['type']) {
+                $this->addLeftJoin($table, $where);
+            } else {
+                $this->addJoin($table, $where);
+            }
         }
 
         // This table is defined in the configuration file, but used in the section below.

@@ -74,7 +74,8 @@
                 "join": {
                     "primaryKey": "id",
                     "foreignTableAlias": "jt",
-                    "foreignKey": "person_organization_id"
+                    "foreignKey": "person_organization_id",
+                    "type": "left"
                 }
             },
             {
