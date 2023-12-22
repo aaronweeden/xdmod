@@ -170,8 +170,14 @@ class JobDataset extends \DataWarehouse\Query\RawQuery
      */
     private function joinTo($othertable, $joinkey, $otherkey, $colalias, $idcol = "id")
     {
-        $this->addTable($othertable);
-        $this->addWhereCondition(new WhereCondition(new TableField($this->getDataTable(), $joinkey), '=', new TableField($othertable, $idcol)));
+        $this->addJoin(
+            $othertable,
+            new WhereCondition(
+                new TableField($this->getDataTable(), $joinkey),
+                '=',
+                new TableField($othertable, $idcol)
+            )
+        );
         $this->addField(new TableField($othertable, $otherkey, $colalias));
     }
 

@@ -431,7 +431,12 @@ class Query extends Loggable
 
     public function addJoin(\DataWarehouse\Query\Model\Table $table, \DataWarehouse\Query\Model\WhereCondition $where)
     {
-        $this->joins[$table->getAlias()->getName()] = array($table, $where);
+        $tableAliasName = $table->getAlias()->getName();
+        if (array_key_exists($tableAliasName, $this->joins)) {
+            $this->addWhereCondition($where);
+        } else {
+            $this->joins[$tableAliasName] = array($table, $where);
+        }
     }
 
     public function addLeftJoin(\DataWarehouse\Query\Model\Table $table, \DataWarehouse\Query\Model\WhereCondition $where)
@@ -779,7 +784,7 @@ FROM (
   SELECT
   %s AS total
   FROM
-    %s
+    %s%s
   WHERE
     %s
   %s
@@ -789,6 +794,7 @@ SQL;
             $format,
             ( $this->isDistinct ? 'DISTINCT ' . implode(', ', $select_fields) . ', 1' : 'SUM(1)' ),
             implode(",\n    ", $select_tables),
+            ( "" == $this->getJoinSql() ? "" : "\n" . $this->getJoinSql() ),
             implode("\n    AND ", $wheres),
             ( count($groups) > 0 ? "GROUP BY\n    " . implode(",\n    ", $groups) : "" )
         );
@@ -1400,12 +1406,11 @@ SQL;
 
         $this->_date_table = new \DataWarehouse\Query\Model\Table(new \DataWarehouse\Query\Model\Schema('modw'), $this->_aggregation_unit.'s', 'duration');
 
-        $this->addTable($this->_date_table);
-
         $date_id_field = new \DataWarehouse\Query\Model\TableField($this->_date_table, 'id');
         $data_table_date_id_field = new \DataWarehouse\Query\Model\TableField($this->_data_table, "{$this->_aggregation_unit}_id");
 
-        $this->addWhereCondition(
+        $this->addJoin(
+            $this->_date_table,
             new \DataWarehouse\Query\Model\WhereCondition(
                 $date_id_field,
                 '=',
