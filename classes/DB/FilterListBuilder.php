@@ -147,8 +147,6 @@ class FilterListBuilder extends Loggable
         $idField = $selectFields[ sprintf('%s_id', $groupBy->getId()) ];
 
         $tablesStr = $dimensionQuery->getTablesSql();
-        $joinStr = $dimensionQuery->getJoinSql();
-        $leftJoinStr = $dimensionQuery->getLeftJoinSql();
         $wheresStr = implode(' AND ', $wheres);
 
         $db->execute(
