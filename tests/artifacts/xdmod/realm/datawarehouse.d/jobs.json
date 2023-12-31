@@ -90,11 +90,11 @@
             "resource": {
                 "additional_join_constraints": [
                     {
-                        "attribute_table": "resourcefact",
-                        "attribute_expr": "id",
+                        "aggregate_table": "resourcefact",
+                        "aggregate_expr": "id",
                         "operation": "=",
-                        "aggregate_table": "resourcespecs",
-                        "aggregate_expr": "resource_id"
+                        "attribute_table": "resourcespecs",
+                        "attribute_expr": "resource_id"
                     }
                 ],
                 "name": "Resource",
