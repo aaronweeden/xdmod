@@ -146,6 +146,7 @@ class FilterListBuilder extends Loggable
 
         $idField = $selectFields[ sprintf('%s_id', $groupBy->getId()) ];
 
+        $tablesStr = $dimensionQuery->getTablesSql();
         $joinStr = $dimensionQuery->getJoinSql();
         $leftJoinStr = $dimensionQuery->getLeftJoinSql();
         $wheresStr = implode(' AND ', $wheres);
@@ -155,9 +156,7 @@ class FilterListBuilder extends Loggable
                 `{$targetSchema}`.`{$mainTableName}`
             SELECT DISTINCT
                 $idField
-            FROM $selectTablesStr
-            $joinStr
-            $leftJoinStr
+            FROM $tablesStr
             WHERE $wheresStr"
         );
 
@@ -188,7 +187,7 @@ class FilterListBuilder extends Loggable
             if ($dimensionNameComparison < 0) {
                 $firstGroupBy = $groupBy;
                 $firstDimensionId = $dimensionId;
-                $firstDimensionQuery = $dimensionQuery;
+                $firstDimensionQuery = $this->createDimensionQuery($realmQuey, $groupBy);
                 $secondGroupBy = $realmGroupBy;
                 $secondDimensionId = $realmGroupById;
                 $secondDimensionQuery = $this->createDimensionQuery($realmQuery, $realmGroupBy);
@@ -227,18 +226,21 @@ class FilterListBuilder extends Loggable
                 )"
             );
 
-            $firstSelectTables = $firstDimensionQuery->getSelectTables();
+            foreach ($secondDimensionQuery->getJoins() as $join) {
+                $firstDimensionQuery->addJoin($join);
+            }
+            foreach ($secondDimensionQuery->getLeftJoins() as $leftJoin) {
+                $firstDimensionQuery->addLeftJoin($leftJoin);
+            }
+            foreach ($secondDimensionQuery->getWhereConditions() as $where) {
+                $firstDimensionQuery->addWhereCondition($where);
+            }
             $firstSelectFields = $firstDimensionQuery->getSelectFields();
-            $firstWheres = $firstDimensionQuery->getWhereConditions();
-            $secondSelectTables = $secondDimensionQuery->getSelectTables();
             $secondSelectFields = $secondDimensionQuery->getSelectFields();
-            $secondWheres = $secondDimensionQuery->getWhereConditions();
-
             $firstIdField = $firstSelectFields[ sprintf('%s_id', $firstDimensionId) ];
             $secondIdField = $secondSelectFields[ sprintf('%s_id', $secondDimensionId) ];
 
-            $selectTablesStr = implode(', ', array_unique(array_merge($firstSelectTables, $secondSelectTables)));
-            $wheresStr = implode(' AND ', array_unique(array_merge($firstWheres, $secondWheres)));
+            $tablesStr = $firstDimensionQuery->getTablesSql();
 
             $db->execute(
                 "INSERT INTO
@@ -246,7 +248,7 @@ class FilterListBuilder extends Loggable
                 SELECT DISTINCT
                     $firstIdField,
                     $secondIdField
-                FROM $selectTablesStr
+                FROM $tablesStr
                 WHERE $wheresStr"
             );
 
@@ -346,9 +348,9 @@ class FilterListBuilder extends Loggable
         // table and column names,
         $dimensionId = $groupBy->getId();
         $dimensionQuery = $this->createDimensionQuery($realmQuery, $groupBy);
-        $dimensionQueryTables = $dimensionQuery->getSelectTables();
+        $dimensionQueryJoins = $dimensionQuery->getJoins();
         $dimensionQueryFields = $dimensionQuery->getSelectFields();
-        $dimensionTableStringComponents = explode(' ', $dimensionQueryTables[1]);
+        $dimensionTableStringComponents = explode(' ', $dimensionQueryJoins[0]);
         $dimensionTable = $dimensionTableStringComponents[0];
         preg_match('/\.(\S+)\s/', $dimensionQueryFields[ sprintf('%s_id', $dimensionId) ], $dimensionColumnMatches);
         $dimensionColumn = $dimensionColumnMatches[1];

@@ -429,9 +429,19 @@ class Query extends Loggable
         }
     }
 
+    public function getJoins()
+    {
+        return $this->joins;
+    }
+
     public function addLeftJoin(\DataWarehouse\Query\Model\Table $table, \DataWarehouse\Query\Model\WhereCondition $where)
     {
         $this->leftJoins[$table->getAlias()->getName()] = array($table, $where);
+    }
+
+    public function getLeftJoins()
+    {
+        return $this->leftJoins;
     }
 
     public function addField(\DataWarehouse\Query\Model\Field $field)
