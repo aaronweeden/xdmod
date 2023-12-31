@@ -848,7 +848,7 @@ SQL;
 
     public function getTablesSql()
     {
-        $sql = $this->_data_table;
+        $sql = $this->_data_table->getQualifiedName(true, true);
         if ('' !== $this->getJoinSql()) {
             $sql .= "\n" . $this->getJoinSql();
         }
@@ -875,7 +875,7 @@ SQL;
             $stmt .= (
                 " $joinType JOIN "
                 . $joincond[0]->getQualifiedName(true, true)
-                . ' ON ' . implode(' AND ', array_slice($joincond, 1)) . "\n";
+                . ' ON ' . implode(' AND ', array_slice($joincond, 1)) . "\n"
             );
         }
         return $stmt;

@@ -968,7 +968,6 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                         $attributeKey = $pieces[1];
                     }
 
-                    // TODO: Test if this is correct.
                     $query->addJoin(
                         $tableObj,
                         new WhereCondition(
@@ -993,7 +992,6 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                         $constraint->attribute_table
                     ) : $this->attributeTableObj
                 );
-                // TODO: Test if this is correct.
                 $query->addJoin(
                     $attributeTableObj,
                     new WhereCondition(
