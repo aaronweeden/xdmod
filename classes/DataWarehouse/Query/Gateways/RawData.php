@@ -59,23 +59,26 @@ class RawData extends \DataWarehouse\Query\Query implements \DataWarehouse\Query
         $factTable = new Table(new Schema('modw'), "job_tasks", "jt");
 
         $resourcefactTable = new Table(new Schema('modw'), 'resourcefact', 'rf');
-        $this->addTable($resourcefactTable);
-
-        $this->addWhereCondition(new WhereCondition(
-            new TableField($dataTable, "task_resource_id"),
-            '=',
-            new TableField($resourcefactTable, "id")
-        ));
+        $this->addJoin(
+            $resourcefactTable,
+            new WhereCondition(
+                new TableField($dataTable, "task_resource_id"),
+                '=',
+                new TableField($resourcefactTable, "id")
+            )
+        );
 
         // For Gateways realm the analog (with person_id) is the Gateway table:
         $personTable = new Table(new Schema('modw_gateways'), 'gateway', 'p');
 
-        $this->addTable($personTable);
-        $this->addWhereCondition(new WhereCondition(
-            new TableField($dataTable, "person_id"),
-            '=',
-            new TableField($personTable, "proxy_person_id")
-        ));
+        $this->addJoin(
+            $personTable,
+            new WhereCondition(
+                new TableField($dataTable, "person_id"),
+                '=',
+                new TableField($personTable, "proxy_person_id")
+            )
+        );
 
         $this->addField(new TableField($resourcefactTable, "code", 'resource'));
         $this->addField(new TableField($personTable, "long_name", "name"));
@@ -89,19 +92,23 @@ class RawData extends \DataWarehouse\Query\Query implements \DataWarehouse\Query
         // This is used by Integrations and not currently shown on the XDMoD interface
         $this->addField(new TableField($factTable, 'name', 'job_name'));
 
-        $this->addTable($joblistTable);
-        $this->addTable($factTable);
+        $this->addJoin(
+            $joblistTable,
+            new WhereCondition(
+                new TableField($dataTable, "id"),
+                "=",
+                new TableField($joblistTable, "agg_id")
+            )
+        );
 
-        $this->addWhereCondition(new WhereCondition(
-            new TableField($joblistTable, "agg_id"),
-            "=",
-            new TableField($dataTable, "id")
-        ));
-        $this->addWhereCondition(new WhereCondition(
-            new TableField($joblistTable, "jobid"),
-            "=",
-            new TableField($factTable, "job_id")
-        ));
+        $this->addJoin(
+            $factTable,
+            new WhereCondition(
+                new TableField($joblistTable, "jobid"),
+                "=",
+                new TableField($factTable, "job_id")
+            )
+        );
 
         switch ($statisticId) {
             case "job_count":

@@ -264,7 +264,6 @@ class Query extends Loggable
 
     protected $_main_stat_field = null;
 
-    private $_tables = array();
     private $_fields = array();
 
     /**
@@ -420,22 +419,13 @@ class Query extends Loggable
         return $return;
     }
 
-    public function addTable(\DataWarehouse\Query\Model\Table $table)
-    {
-        $this->_tables[$table->getAlias()->getName()] = $table;
-    }
-    public function getTables()
-    {
-        return $this->_tables;
-    }
-
     public function addJoin(\DataWarehouse\Query\Model\Table $table, \DataWarehouse\Query\Model\WhereCondition $where)
     {
         $tableAliasName = $table->getAlias()->getName();
         if (array_key_exists($tableAliasName, $this->joins)) {
-            $this->addWhereCondition($where);
+            $this->joins[$tableAliasName][] = $where;
         } else {
-            $this->joins[$tableAliasName] = array($table, $where);
+            $this->joins[$tableAliasName] = [$table, $where];
         }
     }
 
@@ -548,16 +538,6 @@ class Query extends Loggable
         return $select_fields;
     }
 
-    public function getSelectTables()
-    {
-        $tables = $this->getTables();
-        $select_tables = array();
-        foreach ($tables as $table) {
-            $select_tables[] = $table->getQualifiedName(true, true);
-        }
-        return $select_tables;
-    }
-
     public function getSelectOrderBy()
     {
         $orders = $this->getOrders();
@@ -616,8 +596,6 @@ class Query extends Loggable
             $this->logAndThrowException("Cannot build dimension values query without specifying a dimension.");
         }
 
-        $select_tables = $this->getSelectTables();
-
         // MetricExplorer::getDimensionValues() expects the fields returned by this query to be
         // named "id", "name", "short_name".  Construct the list of dimension fields without the
         // alias so we can add our own. We do not call getSelectFields() because that generates
@@ -657,7 +635,7 @@ class Query extends Loggable
         // changing the order in which setStat() or setGroupBy() are called will change the table
         // order.
 
-        $dimension_table = $select_tables[1];
+        $dimension_table = $this->joins[0];
 
         $restriction_wheres = array();
         $dimension_group_by = $this->groupBy();
@@ -729,7 +707,6 @@ SQL;
         $wheres = $this->getWhereConditions();
         $groups = $this->getGroups();
 
-        $select_tables = $this->getSelectTables();
         $select_fields = $this->getSelectFields();
 
         if ( 0 == count($select_fields) ) {
@@ -742,7 +719,7 @@ SQL;
 SELECT%s
   %s
 FROM
-  %s%s%s
+  %s
 WHERE
   %s
 %s%s%s%s
@@ -752,9 +729,7 @@ SQL;
             $format,
             ( $this->isDistinct ? ' DISTINCT' : '' ),
             implode(",\n  ", $select_fields),
-            implode(",\n  ", $select_tables),
-            ( "" == $this->getJoinSql() ? "" : "\n" . $this->getJoinSql() ),
-            ( "" == $this->getLeftJoinSql() ? "" : "\n" . $this->getLeftJoinSql() ),
+            $this->getTablesSql(),
             implode("\n  AND ", $wheres),
             ( count($groups) > 0 ? "GROUP BY " . implode(",\n  ", $groups) : "" ),
             ( null !== $extraHavingClause ? "\nHAVING $extraHavingClause" : "" ),
@@ -774,7 +749,6 @@ SQL;
         $wheres = $this->getWhereConditions();
         $groups = $this->getGroups();
 
-        $select_tables = $this->getSelectTables();
         $select_fields = $this->getSelectFields();
 
         $format = <<<SQL
@@ -784,7 +758,7 @@ FROM (
   SELECT
   %s AS total
   FROM
-    %s%s
+    %s
   WHERE
     %s
   %s
@@ -793,8 +767,7 @@ SQL;
         $data_query = sprintf(
             $format,
             ( $this->isDistinct ? 'DISTINCT ' . implode(', ', $select_fields) . ', 1' : 'SUM(1)' ),
-            implode(",\n    ", $select_tables),
-            ( "" == $this->getJoinSql() ? "" : "\n" . $this->getJoinSql() ),
+            $this->getTablesSql(),
             implode("\n    AND ", $wheres),
             ( count($groups) > 0 ? "GROUP BY\n    " . implode(",\n    ", $groups) : "" )
         );
@@ -863,22 +836,37 @@ SQL;
         $this->roleParameterDescriptions = $other->roleParameterDescriptions;
     }
 
+    public function getTablesSql()
+    {
+        $sql = $this->_data_table;
+        if ('' !== $this->getJoinSql()) {
+            $sql .= "\n" . $this->getJoinSql();
+        }
+        if ('' !== $this->getLeftJoinSql()) {
+            $sql .= "\n" . $this->getLeftJoinSql();
+        }
+        return $sql;
+    }
+
     protected function getJoinSql()
     {
-        $stmt = '';
-        foreach ($this->joins as $joincond) {
-            $stmt .= ' JOIN ' . $joincond[0]->getQualifiedName(true, true) .
-                ' ON ' . $joincond[1] . "\n";
-        }
-        return $stmt;
+        return self::getJoinTypeSql($this->joins, '');
     }
 
     protected function getLeftJoinSql()
     {
+        return self::getJoinTypeSql($this->leftJoins, 'LEFT');
+    }
+
+    private static function getJoinTypeSql($array, $joinType)
+    {
         $stmt = '';
-        foreach ($this->leftJoins as $joincond) {
-            $stmt .= ' LEFT JOIN ' . $joincond[0]->getQualifiedName(true, true) .
-                ' ON ' . $joincond[1] . "\n";
+        foreach ($array as $joincond) {
+            $stmt .= (
+                " $joinType JOIN "
+                . $joincond[0]->getQualifiedName(true, true)
+                . ' ON ' . implode(' AND ', array_slice($joincond, 1)) . "\n";
+            );
         }
         return $stmt;
     }
@@ -926,7 +914,6 @@ SQL;
             $this->realm->getAggregateTableAlias(),
             $join_index
         );
-        $this->addTable($this->_data_table);
     }
     public function getDataTable()
     {
@@ -1244,8 +1231,8 @@ SQL;
         }
 
         // Use the group by instance specific to the situation to
-        // construct where clause and add it to the current query object
-        return $group_by->addWhereJoin($this, $this->_data_table, $operation, $whereConstraint);
+        // construct join and where clauses and add them to the current query object
+        return $group_by->addWhereAndJoin($this, $this->_data_table, $operation, $whereConstraint);
     }
 
     public function addFilter($group_by_name)

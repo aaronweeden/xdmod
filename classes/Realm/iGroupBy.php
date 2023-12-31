@@ -177,7 +177,7 @@ interface iGroupBy
     /**
      * Add a WHERE condition to the specified query. This will perform the following operations:
      *  1. Add the descriptive attributes table to the query
-     *  2. Add a WHERE condition to the query that will serve as the JOIN specificaiton
+     *  2. Add JOINs to the query for each attribute and aggregate column in the key map
      *  3. Add a WHERE condition to the query ensuring that the descriptive attributes are
      *     constrained according to the value supplied.
      *
@@ -189,7 +189,7 @@ interface iGroupBy
      * @param string $value The acceptable values of the WHERE condition
      */
 
-    public function addWhereJoin(\DataWarehouse\Query\iQuery $query, $aggregateTableName, $operation, $whereConstraint);
+    public function addWhereAndJoin(\DataWarehouse\Query\iQuery $query, $aggregateTableName, $operation, $whereConstraint);
 
     /**
      * Add an ORDER BY clause to the specified query.

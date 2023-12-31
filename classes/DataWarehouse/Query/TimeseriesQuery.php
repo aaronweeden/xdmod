@@ -194,53 +194,6 @@ class TimeseriesQuery extends Query implements iQuery
         );
     }
 
-    public function getQueryString(
-        $limit = null,
-        $offset = null,
-        $extraHavingClause = null
-    ) {
-        $wheres = $this->getWhereConditions();
-        $groups = $this->getGroups();
-
-        $select_tables = $this->getSelectTables();
-        $select_fields = $this->getSelectFields();
-
-        $select_order_by = $this->getSelectOrderBy();
-
-        $select_group_by = array();
-
-        foreach ($groups as $group) {
-            $select_group_by[] = $group->getQualifiedName(false);
-        }
-
-        $format = <<<SQL
-SELECT
-  %s
-FROM
-  %s
-WHERE
-  %s
-%s%s%s%s
-SQL;
-
-        $data_query = sprintf(
-            $format,
-            implode(",\n  ", $select_fields),
-            implode(",\n  ", $select_tables),
-            implode("\n  AND ", $wheres),
-            ( count($select_group_by) > 0 ? "GROUP BY " . implode(",\n  ", $select_group_by) : "" ),
-            ( null !== $extraHavingClause ? "\nHAVING $extraHavingClause" : "" ),
-            ( count($select_order_by) > 0 ? "\nORDER BY " . implode(",\n  ", $select_order_by) : "" ),
-            ( null !== $limit && null !== $offset ? "\nLIMIT $limit OFFSET $offset" : "" )
-        );
-
-        $this->logger->debug(
-            sprintf("%s %s()\n%s", $this, __FUNCTION__, $data_query)
-        );
-
-        return $data_query;
-    }
-
     public function getTimestamps()
     {
         // Obtain the attribute values \ETL\DbModel\Query object from the GroupBy and modify it to

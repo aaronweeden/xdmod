@@ -141,13 +141,13 @@ class FilterListBuilder extends Loggable
         );
         $dimensionQuery = $this->createDimensionQuery($realmQuery, $groupBy);
 
-        $selectTables = $dimensionQuery->getSelectTables();
         $selectFields = $dimensionQuery->getSelectFields();
         $wheres = $dimensionQuery->getWhereConditions();
 
         $idField = $selectFields[ sprintf('%s_id', $groupBy->getId()) ];
 
-        $selectTablesStr = implode(', ', $selectTables);
+        $joinStr = $dimensionQuery->getJoinSql();
+        $leftJoinStr = $dimensionQuery->getLeftJoinSql();
         $wheresStr = implode(' AND ', $wheres);
 
         $db->execute(
@@ -156,6 +156,8 @@ class FilterListBuilder extends Loggable
             SELECT DISTINCT
                 $idField
             FROM $selectTablesStr
+            $joinStr
+            $leftJoinStr
             WHERE $wheresStr"
         );
 

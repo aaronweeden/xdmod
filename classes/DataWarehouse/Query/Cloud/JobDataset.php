@@ -36,14 +36,15 @@ class JobDataset extends \DataWarehouse\Query\RawQuery
                 $alias
             );
             $tables[$alias] = $table;
-            $this->addTable($table);
-
             $join = $tableDef['join'];
-            $this->addWhereCondition(new WhereCondition(
-                new TableField($table, $join['primaryKey']),
-                '=',
-                new TableField($tables[$join['foreignTableAlias']], $join['foreignKey'])
-            ));
+            $this->addJoin(
+                $table,
+                new WhereCondition(
+                    new TableField($table, $join['primaryKey']),
+                    '=',
+                    new TableField($tables[$join['foreignTableAlias']], $join['foreignKey'])
+                )
+            );
         }
 
         // This table is defined in the configuration file, but used in the section below.
@@ -131,8 +132,14 @@ class JobDataset extends \DataWarehouse\Query\RawQuery
      */
     private function joinTo($othertable, $joinkey, $otherkey, $colalias, $idcol = "id")
     {
-        $this->addTable($othertable);
-        $this->addWhereCondition(new WhereCondition(new TableField($this->getDataTable(), $joinkey), '=', new TableField($othertable, $idcol)));
+        $this->addJoin(
+            $othertable,
+            new WhereCondition(
+                new TableField($this->getDataTable(), $joinkey),
+                '=',
+                new TableField($othertable, $idcol)
+            )
+        );
         $this->addField(new TableField($othertable, $otherkey, $colalias));
     }
 

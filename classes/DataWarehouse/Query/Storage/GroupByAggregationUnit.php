@@ -41,7 +41,7 @@ abstract class GroupByAggregationUnit extends GroupBy
         }
     }
 
-    public function addWhereJoin(
+    public function addWhereAndJoin(
         Query &$query,
         Table $dataTable,
         $multiGroup,

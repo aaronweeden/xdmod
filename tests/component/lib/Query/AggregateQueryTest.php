@@ -443,10 +443,10 @@ SQL;
     }
 
     /**
-     * Test the addWhereJoin() method.
+     * Test the addWhereAndJoin() method.
      */
 
-    public function testAddWhereJoin()
+    public function testAddWhereAndJoin()
     {
         $expected =<<<SQL
 SELECT
@@ -477,7 +477,7 @@ SQL;
         $query->addWhereAndJoin('person', '>', 'constraint');
 
         $generated = $query->getQueryString();
-        $this->assertEquals($expected, $generated, 'AggregateQuery::addWhereJoin()');
+        $this->assertEquals($expected, $generated, 'AggregateQuery::addWhereAndJoin()');
     }
 
     /**
