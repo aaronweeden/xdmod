@@ -70,8 +70,8 @@ The `xdmod-build-filter-lists` command is used to build filter lists for the
 different realms.  Ability to auto detect and build all or specify a specific
 realm or realms to process.
 
-### acl-config
+### xdmod-acl-config
 
-The `acl-config` command ensures that all acl related tables are present, 
+The `xdmod-acl-config` command ensures that all acl related tables are present, 
 required configuration files are valid, and the acl related database tables are 
 populated correctly.

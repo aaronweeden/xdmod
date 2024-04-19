@@ -30,7 +30,7 @@ First add the statistic to the Jobs realm statistics configuration.
 }
 ```
 
-Next, run `acl-config` and restart your web server. Note, depending on which Operating System you have XDMoD installed
+Next, run `xdmod-acl-config` and restart your web server. Note, depending on which Operating System you have XDMoD installed
 on you may need to restart `php-fpm` in addition to `httpd`.
 
 Reload the portal and the "Node Utilization" statistic will appear in the list

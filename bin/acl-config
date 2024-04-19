@@ -52,7 +52,7 @@ $tables = array(
     'acl_dimensions'
 );
 
-$lockFile = new \ETL\LockFile(sys_get_temp_dir(), 'acl-config');
+$lockFile = new \ETL\LockFile(sys_get_temp_dir(), 'xdmod-acl-config');
 
 try {
 
@@ -1962,7 +1962,7 @@ function syncTableData(iDatabase $db, array $tables)
 
         // We throw an Exception so that we do not leave the db in an inconsistent state.
         if ($rolledBack === false) {
-            throw new Exception("Rollback failed. Database may be left in an inconsistent state. Please investigate and / or contact support before running acl-config again.");
+            throw new Exception("Rollback failed. Database may be left in an inconsistent state. Please investigate and / or contact support before running xdmod-acl-config again.");
         }
     }
 
@@ -2102,7 +2102,7 @@ function boolToString($value)
 function displayHelp()
 {
     $usage = <<<EOT
-Usage: acl-config [options]
+Usage: xdmod-acl-config [options]
 
 Options:
     -t, --dryrun

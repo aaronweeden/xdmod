@@ -108,13 +108,13 @@ You may add the Gateways realm anyplace the Jobs realm is specified in the file.
 ...
 }
 ```
-### 3. Run acl-config
+### 3. Run xdmod-acl-config
 
 This step enables the UI to display the new Gateways realm that you configured in `resource_types.json`.
 
 Command:
 
-`$ acl-config`
+`$ xdmod-acl-config`
 
 ### 4. Verify
 

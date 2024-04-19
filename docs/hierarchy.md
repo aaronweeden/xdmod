@@ -160,7 +160,7 @@ Remove these entries from the files:
 
 (These may appear multiple times and will reference the corresponding realm.)
 
-Then run `acl-config`.
+Then run `xdmod-acl-config`.
 
 These correspond to the three levels of the hierarchy.  The names refer
 to those used by XSEDE, but the text displayed to overridden by the

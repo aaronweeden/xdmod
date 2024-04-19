@@ -48,7 +48,7 @@ and populating the tables required by the ACL framework.
 
 If your Open XDMoD Installation requires modifications to the ACL tables
 (`/etc/xdmod/etl/etl_tables.d/acls/<table>.json`) then running this step
-again or the `acl-config` bin script is required.
+again or the `xdmod-acl-config` bin script is required.
 
 ### Organization Settings
 

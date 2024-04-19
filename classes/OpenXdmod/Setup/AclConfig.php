@@ -21,9 +21,9 @@ Populating the appropriate Acl related tables from the information found in said
 configuration files.
 
 Note: If you would like to execute this script outside of the setup script it is
-located at: <xdmod_install_dir>/bin/acl-config
+located at: <xdmod_install_dir>/bin/xdmod-acl-config
 MSG;
-    protected $scriptName = 'acl-config';
+    protected $scriptName = 'xdmod-acl-config';
 
     public function handle()
     {
