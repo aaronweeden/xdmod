@@ -21,6 +21,7 @@ use Silex\ControllerCollection;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
 use XDUser;
 use DataWarehouse\Access\MetricExplorer;
@@ -798,7 +799,11 @@ class WarehouseControllerProvider extends BaseControllerProvider
      */
     public function getAggregateData(Request $request, Application $app)
     {
-        $user = $this->authorize($request);
+        try {
+            $user = Tokens::authenticate($request);
+        } catch (UnauthorizedHttpException $e) {
+            $user = $this->authorize($request);
+        }
 
         $json_config = $this->getStringParam($request, 'config', true);
         $start = $this->getIntParam($request, 'start', true);
@@ -859,16 +864,58 @@ class WarehouseControllerProvider extends BaseControllerProvider
 
         $dataset = new \DataWarehouse\Data\SimpleDataset($query);
         $results = $dataset->getResults($limit, $start);
-        foreach($results as &$val){
-            $val['name'] = $val[$config->group_by . '_name'];
-            $val['id'] = $val[$config->group_by . '_id'];
-            $val['short_name'] = $val[$config->group_by . '_short_name'];
-            $val['order_id'] = $val[$config->group_by . '_order_id'];
-            unset($val[$config->group_by . '_id']);
-            unset($val[$config->group_by . '_name']);
-            unset($val[$config->group_by . '_short_name']);
-            unset($val[$config->group_by . '_order_id']);
+
+        $format = $this->getStringParam($request, 'format', false, 'jsonstore');
+
+        if ('long' === $format) {
+            $headerRow = ['Date', 'Metric'];
+            $groupById = $query->groupBy()->getId();
+            $groupByName = $query->groupBy()->getName();
+            if ('none' !== $groupById) {
+                array_push($headerRow, "$groupByName ID", "$groupByName Label");
+            }
+            array_push($headerRow, 'Value');
+            $newResults = [$headerRow];
+            $stats = [];
+            foreach ($query->getStats() as $stat) {
+                $stats[$stat->getId()] = $stat->getName();
+            }
+            $overallStartDate = $query->getStartDate();
+            foreach ($results as $result) {
+                foreach ($stats as $statId => $statName) {
+                    $row = [
+                        (
+                            $isTimeseries
+                            ? $result[$query->getAggregationUnitName() . '_name']
+                            : $overallStartDate
+                        ),
+                        $statName
+                    ];
+                    if ('none' !== $groupById) {
+                        array_push(
+                            $row,
+                            $result[$groupById . '_id'],
+                            $result[$groupById . '_name']
+                        );
+                    }
+                    array_push($row, $result[$statId]);
+                    array_push($newResults, $row);
+                }
+            }
+            $results = $newResults;
+        } else {
+            foreach($results as &$val){
+                $val['name'] = $val[$config->group_by . '_name'];
+                $val['id'] = $val[$config->group_by . '_id'];
+                $val['short_name'] = $val[$config->group_by . '_short_name'];
+                $val['order_id'] = $val[$config->group_by . '_order_id'];
+                unset($val[$config->group_by . '_id']);
+                unset($val[$config->group_by . '_name']);
+                unset($val[$config->group_by . '_short_name']);
+                unset($val[$config->group_by . '_order_id']);
+            }
         }
+        // TODO: handle offset+limit param on client side
         return $app->json(
             array(
                 'results' => $results,
