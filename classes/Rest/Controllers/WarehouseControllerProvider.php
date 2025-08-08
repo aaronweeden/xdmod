@@ -789,7 +789,7 @@ class WarehouseControllerProvider extends BaseControllerProvider
     }
 
     /**
-     * Return aggregate data from the datawarehouse
+     * Return timeseries or aggregate data from the data warehouse
      *
      * @param Request     $request The request used to make this call.
      * @param Application $app     The router application.
@@ -824,7 +824,14 @@ class WarehouseControllerProvider extends BaseControllerProvider
             throw new AccessDeniedException('access denied to ' . json_encode($forbiddenStats));
         }
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $isTimeseries = $this->getBooleanParam($request, 'timeseries');
+        if ($isTimeseries) {
+            $queryClass = '\DataWarehouse\Query\TimeseriesQuery';
+        } else {
+            $queryClass = '\DataWarehouse\Query\AggregateQuery';
+        }
+
+        $query = new $queryClass(
             $config->realm,
             $config->aggregation_unit,
             $config->start_date,
