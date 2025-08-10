@@ -807,7 +807,13 @@ class WarehouseControllerProvider extends BaseControllerProvider
 
         $json_config = $this->getStringParam($request, 'config', true);
         $start = $this->getIntParam($request, 'start', true);
+        if ($start < 0) {
+            throw new BadRequestHttpException('start parameter must be positive.');
+        }
         $limit = $this->getIntParam($request, 'limit', true);
+        if ($limit < 0) {
+            throw new BadRequestHttpException('limit parameter must be positive.');
+        }
 
         $config = json_decode($json_config);
 
@@ -902,7 +908,10 @@ class WarehouseControllerProvider extends BaseControllerProvider
                     array_push($newResults, $row);
                 }
             }
-            $results = $newResults;
+            $response = [
+                'results' => $newResults,
+                'success' => true
+            ];
         } else {
             foreach($results as &$val){
                 $val['name'] = $val[$config->group_by . '_name'];
@@ -914,15 +923,14 @@ class WarehouseControllerProvider extends BaseControllerProvider
                 unset($val[$config->group_by . '_short_name']);
                 unset($val[$config->group_by . '_order_id']);
             }
-        }
-        // TODO: handle offset+limit param on client side
-        return $app->json(
-            array(
+            $response = [
                 'results' => $results,
                 'total' => $dataset->getTotalPossibleCount(),
                 'success' => true
-            )
-        );
+            ];
+        }
+        // TODO: handle offset+limit param on client side
+        return $app->json($response);
     }
 
     /**
