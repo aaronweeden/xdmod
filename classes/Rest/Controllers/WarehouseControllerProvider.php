@@ -325,7 +325,7 @@ class WarehouseControllerProvider extends BaseControllerProvider
         $controller
             ->get("$root/datasets", "$current::getDatasets");
 
-        $controller->get("$root/aggregatedata", "$current::getAggregateData");
+        $controller->get("$root/aggregatedata", "$current::getMetricData");
 
         $controller
             ->get("$root/plots/formats/output", "$current::getPlotOutputFormats");
@@ -796,8 +796,9 @@ class WarehouseControllerProvider extends BaseControllerProvider
      * @param Application $app     The router application.
      *
      * @return json object
+     * @throws BadRequestHttpException
      */
-    public function getAggregateData(Request $request, Application $app)
+    public function getMetricData(Request $request, Application $app)
     {
         try {
             $user = Tokens::authenticate($request);
@@ -852,6 +853,22 @@ class WarehouseControllerProvider extends BaseControllerProvider
 
         $allRoles = $user->getAllRoles();
         $query->setMultipleRoleParameters($allRoles, $user);
+
+        if (property_exists($config, 'additional_group_by_fields')) {
+            $badRequestMsg = 'config property additional_group_by_fields must be an array of strings.';
+            if (!is_array($config->additional_group_by_fields)) {
+                throw new BadRequestHttpException($badRequestMsg);
+            }
+            $validAGBFN = $query->groupBy()->getAdditionalFieldNames();
+            foreach ($config->additional_group_by_fields as $field) {
+                if (!is_string($field)) {
+                    throw new BadRequestHttpException($badRequestMsg);
+                }
+                if (!in_array($field, $validAGBFN)) {
+                    throw new BadRequestHttpException('Unknown field in additional_group_by_fields array.');
+                }
+            }
+        }
 
         foreach ($config->statistics as $stat) {
             $query->addStat($stat);

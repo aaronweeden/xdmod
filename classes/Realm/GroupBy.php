@@ -221,6 +221,12 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
     protected $showAllDimensionValues = false;
 
     /**
+     * @var array of strings of names of configured additional fields that can be selected.
+     */
+
+    private $additionalFieldNames;
+
+    /**
      * @see iGroupBy::factory()
      */
 
@@ -291,7 +297,8 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             'module' => 'string',
             'order' => 'int',
             'show_in_catalog' => 'bool',
-            'show_all_dimension_values' => 'bool'
+            'show_all_dimension_values' => 'bool',
+            'additional_fields' => 'object'
         );
 
         if ( ! \xd_utilities\verify_object_property_types($config, $optionalConfigTypes, $messages, true) ) {
@@ -449,6 +456,9 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                     break;
                 case 'show_all_dimension_values':
                     $this->showAllDimensionValues = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+                    break;
+                case 'additional_fields':
+                    $this->additionalFieldNames = array_keys((array)$value);
                     break;
                 default:
                     $this->logger->notice(
@@ -1487,6 +1497,15 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
     public function showAllDimensionValues()
     {
         return $this->showAllDimensionValues;
+    }
+
+    /**
+     * @see iGroupBy::getAdditionalFieldNames()
+     */
+
+    public function getAdditionalFieldNames()
+    {
+        return $this->additionalFieldNames;
     }
 
     /**

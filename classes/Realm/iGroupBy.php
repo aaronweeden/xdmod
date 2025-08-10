@@ -345,6 +345,12 @@ interface iGroupBy
     public function showAllDimensionValues();
 
     /**
+     * A list of string names of configured additional fields that can be selected.
+     */
+
+    public function getAdditionalFieldNames();
+
+    /**
      * Generate a string representation of the object
      */
 
