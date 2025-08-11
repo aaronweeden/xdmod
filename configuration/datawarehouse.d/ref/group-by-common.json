@@ -152,7 +152,7 @@
             }
         },
         "category": "Administrative",
-        "description_html": "A person who is on a PIs allocation, hence able to run jobs on resources.",
+        "description_html": "A person who is on a PI's allocation, hence able to run jobs on resources.",
         "name": "User"
     },
     "pi": {
@@ -393,6 +393,10 @@
                 "order_id": "id",
                 "short_name": "short_name"
             }
+        },
+        "additional_fields": {
+            "Latitude": "",
+            "Longitude": ""
         },
         "category": "Administrative",
         "description_html": "Organizations that have users with allocations.",
