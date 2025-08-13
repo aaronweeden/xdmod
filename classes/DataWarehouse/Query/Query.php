@@ -17,6 +17,7 @@ use Exception;
 use CCR\Loggable;
 use CCR\DB;
 use CCR\DB\PDODB;
+use DataWarehouse\Query\Model\Field;
 use FilterListHelper;
 use Models\Services\Parameters;
 use ETL\VariableStore;
@@ -448,7 +449,7 @@ class Query extends Loggable
         $this->leftJoins[$table->getAlias()->getName()] = array($table, $where);
     }
 
-    public function addField(\DataWarehouse\Query\Model\Field $field)
+    public function addField(Field $field)
     {
         $this->_fields[$field->getAlias()->getName()] = $field;
     }
@@ -511,7 +512,7 @@ class Query extends Loggable
         return $this->_where_conditions;
     }
 
-    public function addGroup(\DataWarehouse\Query\Model\Field $field)
+    public function addGroup(Field $field)
     {
         $this->_groups[$field->getAlias()->getName()] = $field;
     }
@@ -577,7 +578,7 @@ class Query extends Loggable
         return $this->_duration_formula;
     }
 
-    public function setDurationFormula(\DataWarehouse\Query\Model\Field $field)
+    public function setDurationFormula(Field $field)
     {
         $this->_duration_formula = $field;
     }
@@ -1262,7 +1263,7 @@ SQL;
         if (isset($this->_group_bys[$sort_group_or_stat_name])) {
             $this->_group_bys[$sort_group_or_stat_name]->addOrder($this, true, $sort_direction, false);
         } elseif (isset($this->_stat_fields[$sort_group_or_stat_name])) {
-            $this->prependOrder(new \DataWarehouse\Query\Model\OrderBy(new \DataWarehouse\Query\Model\Field($sort_group_or_stat_name), $sort_direction, $sort_group_or_stat_name));
+            $this->prependOrder(new \DataWarehouse\Query\Model\OrderBy(new Field($sort_group_or_stat_name), $sort_direction, $sort_group_or_stat_name));
         }
     }
 
@@ -1414,7 +1415,7 @@ SQL;
             new \DataWarehouse\Query\Model\WhereCondition(
                 $data_table_date_id_field,
                 'between',
-                new \DataWarehouse\Query\Model\Field(
+                new Field(
                     sprintf("%s and %s", $this->_min_date_id, $this->_max_date_id)
                 )
             )
@@ -1430,7 +1431,7 @@ SQL;
         $duration_result = DB::factory($this->_db_profile)->query($duration_query);
 
         $this->setDurationFormula(
-            new \DataWarehouse\Query\Model\Field(
+            new Field(
                 "(" . ( $duration_result[0]['duration'] == '' ? 1 : $duration_result[0]['duration'] ) . ")"
             )
         );
@@ -1481,6 +1482,19 @@ SQL;
     public function isDistinct()
     {
         return $this->isDistinct;
+    }
+
+    /**
+     * Select one of the additional fields that is configured for the primary GroupBy.
+     *
+     * @param string $field
+     * @return null
+     */
+
+    public function addAdditionalGroupByField($field)
+    {
+        $formula = $this->groupBy()->getAdditionalFieldFormula($field);
+        $this->addField(new Field($formula, $field));
     }
 
     /**

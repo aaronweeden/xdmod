@@ -854,20 +854,26 @@ class WarehouseControllerProvider extends BaseControllerProvider
         $allRoles = $user->getAllRoles();
         $query->setMultipleRoleParameters($allRoles, $user);
 
-        if (property_exists($config, 'additional_group_by_fields')) {
-            $badRequestMsg = 'config property additional_group_by_fields must be an array of strings.';
-            if (!is_array($config->additional_group_by_fields)) {
+        if (property_exists($config, 'group_by_fields')) {
+            $badRequestMsg = 'config property group_by_fields must be an array of strings.';
+            if (!is_array($config->group_by_fields)) {
                 throw new BadRequestHttpException($badRequestMsg);
             }
             $validAGBFN = $query->groupBy()->getAdditionalFieldNames();
-            foreach ($config->additional_group_by_fields as $field) {
+            foreach ($config->group_by_fields as $field) {
                 if (!is_string($field)) {
                     throw new BadRequestHttpException($badRequestMsg);
                 }
-                if (!in_array($field, $validAGBFN)) {
-                    throw new BadRequestHttpException('Unknown field in additional_group_by_fields array.');
+                if ('ID' !== $field && 'Name' !== $field) {
+                    if (!in_array($field, $validAGBFN)) {
+                        throw new BadRequestHttpException('Unknown field in group_by_fields array.');
+                    }
+                    $query->addAdditionalGroupByField($field);
                 }
             }
+            $groupByFields = $config->group_by_fields;
+        } else {
+            $groupByFields = ['ID', 'Name'];
         }
 
         foreach ($config->statistics as $stat) {
@@ -895,7 +901,9 @@ class WarehouseControllerProvider extends BaseControllerProvider
             $groupById = $query->groupBy()->getId();
             $groupByName = $query->groupBy()->getName();
             if ('none' !== $groupById) {
-                array_push($headerRow, "$groupByName ID", "$groupByName Label");
+                foreach ($groupByFields as $field) {
+                    array_push($headerRow, "$groupByName $field");
+                }
             }
             array_push($headerRow, 'Value');
             $newResults = [$headerRow];
@@ -915,11 +923,19 @@ class WarehouseControllerProvider extends BaseControllerProvider
                         $statName
                     ];
                     if ('none' !== $groupById) {
-                        array_push(
-                            $row,
-                            $result[$groupById . '_id'],
-                            $result[$groupById . '_name']
-                        );
+                        foreach ($groupByFields as $field) {
+                            switch ($field) {
+                                case 'ID':
+                                    array_push($row, $result[$groupById . '_id']);
+                                    break;
+                                case 'Name':
+                                    array_push($row, $result[$groupById . '_name']);
+                                    break;
+                                default:
+                                    array_push($row, $result[$field]);
+                                    break;
+                            }
+                        }
                     }
                     array_push($row, $result[$statId]);
                     array_push($newResults, $row);

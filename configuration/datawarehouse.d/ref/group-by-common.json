@@ -395,8 +395,12 @@
             }
         },
         "additional_fields": {
-            "Latitude": "",
-            "Longitude": ""
+            "Latitude": {
+                "formula": "organization.latitude"
+            },
+            "Longitude": {
+                "formula": "organization.longitude"
+            }
         },
         "category": "Administrative",
         "description_html": "Organizations that have users with allocations.",

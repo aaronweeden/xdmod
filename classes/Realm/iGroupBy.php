@@ -345,10 +345,17 @@ interface iGroupBy
     public function showAllDimensionValues();
 
     /**
-     * A list of string names of configured additional fields that can be selected.
+     * @return array of string names of configured additional fields.
      */
 
     public function getAdditionalFieldNames();
+
+    /**
+     * @param string $field a configured additional field.
+     * @return string the associated formula for that field.
+     */
+
+    public function getAdditionalFieldFormula($field);
 
     /**
      * Generate a string representation of the object

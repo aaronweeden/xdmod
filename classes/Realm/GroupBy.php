@@ -221,10 +221,13 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
     protected $showAllDimensionValues = false;
 
     /**
-     * @var array of strings of names of configured additional fields that can be selected.
+     * @var associative array of configured additional fields that can be selected.
+     *      The keys are the names of the fields and the values are associative
+     *      arrays that each have the required key "formula" and optional keys
+     *      "description" and "filterable".
      */
 
-    private $additionalFieldNames;
+    private $additionalFields;
 
     /**
      * @see iGroupBy::factory()
@@ -458,7 +461,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                     $this->showAllDimensionValues = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                     break;
                 case 'additional_fields':
-                    $this->additionalFieldNames = array_keys((array)$value);
+                    $this->additionalFields = (array)$value;
                     break;
                 default:
                     $this->logger->notice(
@@ -1505,7 +1508,16 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
 
     public function getAdditionalFieldNames()
     {
-        return $this->additionalFieldNames;
+        return array_keys($this->additionalFields);
+    }
+
+    /**
+     * @see iGroupBy::getAdditionalFieldFormula()
+     */
+
+    public function getAdditionalFieldFormula($field)
+    {
+        return $this->additionalFields[$field]->formula;
     }
 
     /**
