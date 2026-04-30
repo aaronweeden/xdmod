@@ -30,6 +30,9 @@ latest_sw_version: "11.5.0"
 version_list:
   - "11.5"
 unsupported_version_list: []
+collections:
+  security_patches:
+    output: true
 
 # For each version the variable `sw_version` should be set to latest release
 # version of Open XDMoD (e.g. "8.1.2") and `prev_sw_version` should be set to
@@ -50,8 +53,9 @@ defaults:
 
 # Build settings
 markdown: kramdown
-theme_subdir: "/xdmod-jekyll-theme"
-gems:
+remote_theme: ubccr/xdmod-jekyll-theme@v0.2.0
+plugins:
   - jekyll-redirect-from
+  - jekyll-remote-theme
 whitelist:
   - jekyll-redirect-from
