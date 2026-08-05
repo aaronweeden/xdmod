@@ -11,18 +11,18 @@ underperforming system hardware and software, and reporting job level
 performance data for every job running on the HPC system without the
 need to recompile applications.  Open XDMoD is designed to meet the
 following objectives:
-1. provide the user community with a tool to more
+1. Provide the user community with a tool to more
 effectively and efficiently use their allocations and optimize their use
-of HPC resources,
-1. provide operational staff with the ability to
+of HPC resources;
+1. Provide operational staff with the ability to
 monitor, diagnose, and tune system performance as well as measure the
-performance of all applications running on their system,
-1. provide
+performance of all applications running on their system;
+1. Provide
 software developers with the ability to easily obtain detailed analysis
-of application performance to aid in optimizing code performance, (4)
-provide stakeholders with a diagnostic tool to facilitate HPC planning
-and analysis, and
-1. provide metrics to help measure scientific impact.
+of application performance to aid in optimizing code performance;
+1. Provide stakeholders with a diagnostic tool to facilitate HPC planning
+and analysis;
+1. Provide metrics to help measure scientific impact.
 In addition, analyses of the operational characteristics of the HPC
 environment can be carried out at different levels of granularity,
 including job, user, or on a system-wide basis.
