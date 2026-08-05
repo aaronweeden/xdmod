@@ -2,7 +2,7 @@
 
 <p>Below is a list of Open XDMoD releases with major features and bug fixes listed.</p>
 
-<h2 id="2026-07-23-v11-0-4">2026-07-23 v11.0.4</h2>
+<h2 id="2026-08-06-v11-0-4">2026-08-06 v11.0.4</h2>
 <ul>
     <li><p>Important Notes</p><ul>
         <li>This release fixes a low severity security vulnerability
@@ -11,20 +11,20 @@
         </ul></li>
     </ul></li>
     <li><p>Bug Fixes</p><ul>
-        <li>Fixes a bug in which recent Cloud realm data do not appear in ACCESS XDMoD.</li>
-        <li>Fix bug in which a Cloud statistic was miscalculated</li>
-        <li>Fix bug in which a migration pipeline could run without a required table existing.</li>
-        <li>Fix bug in which job efficiency dashboard charts would not render.</li>
-        <li>Fix bug in which Job Viewer charts used wrong line type with null values.</li>
+        <li>Fix extraneous rows appearing in the
+            <code>modw_cloud.instance_type</code> table.</li>
+        <li>Fix calculation of the Cloud realm's "Wall Hours: Per Session"
+            metric.</li>
+        <li>Fix migrations for versions 10.5.1 -&gt; 11.0.0 -&gt; 11.0.1.</li>
+        <li>Fix rendering bug with job efficiency dashboard component.</li>
+        <li>Fix display of timeseries plots in the Job Viewer tab.</li>
+        <li>Add missing metadata and image alt text to maintenance page.</li>
     </ul></li>
     <li><p>Enhancements</p><ul>
+        <li>Add login screen for tutorial accounts.</li>
         <li>Improve performance of database queries.</li>
     </ul></li>
-    <li><p>Maintenance / Code Quality</p><ul>
-        <li>Refactor chart generation during export.</li>
-    </ul></li>
 </ul>
-
 
 <h2 id="2026-05-12-v11-0-3">2026-05-12 v11.0.3</h2>
 <ul>
