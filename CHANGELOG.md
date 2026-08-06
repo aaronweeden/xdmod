@@ -17,7 +17,7 @@
       ([\#2270](https://github.com/ubccr/xdmod/pull/2270)).
     - Fix display of timeseries plots in the Job Viewer tab
       ([\#2269](https://github.com/ubccr/xdmod/pull/2269)).
-    - Add missing metadata and image alt text to maintenance page
+    - Add missing metadata and image alt text to the maintenance page
       ([\#2269](https://github.com/ubccr/xdmod/pull/2269)).
 - Enhancements
     - Add login screen for tutorial accounts
