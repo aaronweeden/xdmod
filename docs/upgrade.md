@@ -457,8 +457,8 @@ For installations in which the Cloud realm is enabled, the following changes
 will be made automatically to the `modw_cloud` schema during the upgrade to fix
 a bug in which extraneous rows appear in the `instance_type` table:
 
-1. Add `disk_gb` column to `instance_data`.
-1. Copy `disk_gb` column from `instance_type` to `instance_data`.
+1. Add the `disk_gb` column to `instance_data`.
+1. Copy the `disk_gb` column from `instance_type` to `instance_data`.
 1. Ingest through the following tables, dropping the `disk_gb` column along
    the way:
     1. `instance_type_union`
@@ -467,16 +467,19 @@ a bug in which extraneous rows appear in the `instance_type` table:
     1. `instance_type_grouped`
     1. `instance_type_staging`
     1. `instance_type`
-1. Reaggregate all of the Cloud realm.
+1. Reaggregate all of the Cloud realm data.
 
-The next time you shred and ingest cloud data, the following tables will also
-have the `disk_gb` column added or dropped:
+The next time you shred and ingest Cloud realm data, some of the following tables will
+also have the `disk_gb` column added or dropped (depending on whether you are
+using `genericcloud` or `openstack`):
 
-- `generic_cloud_raw_event` (add `disk_gb`)
-- `generic_cloud_staging_event` (add `disk_gb`)
-- `openstack_staging_event` (add `disk_gb`)
-- `openstack_raw_instance_type` (drop `disk_gb`)
-- `generic_cloud_raw_instance_type` (drop `disk_gb`)
+- Add `disk_db`:
+    - `generic_cloud_raw_event`
+    - `generic_cloud_staging_event`
+    - `openstack_staging_event`
+- Drop `disk_db`:
+    - `openstack_raw_instance_type`
+    - `generic_cloud_raw_instance_type`
 
 In addition, the next time aggregation is run for each of the Jobs, Cloud,
 Storage, and Resource Specifications realms, the corresponding aggregate tables
