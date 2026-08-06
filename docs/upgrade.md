@@ -448,7 +448,7 @@ Additional 11.0.4 Upgrade Notes
 -------------------
 
 This release contains a fix for a bug in the upgrade process from 10.5.1 to
-11.0.0 or from 11.0.0 to 11.0.1 for installations in which the Cloud realm is
+11.0.0 and from 11.0.0 to 11.0.1 for installations in which the Cloud realm is
 not enabled.
 
 ### Database Changes
