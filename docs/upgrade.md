@@ -447,12 +447,33 @@ In addition:
 Additional 11.0.4 Upgrade Notes
 -------------------
 
-This release contains an important bugfix for upgrading from 10.5.1 to 11.0.0
-or 11.0.0 to 11.0.1 if the Cloud realm was not enabled.
+This release contains a fix for a bug in the upgrade process from 10.5.1 to
+11.0.0 or from 11.0.0 to 11.0.1 for installations in which the Cloud realm is
+not enabled.
 
-In addition:
-- The `modw_cloud.instance_type` will have its `disk_gb` column removed and
-  added to the `modw_cloud.instance_data` table.
+### Database Changes
+
+For installations in which the Cloud realm is enabled, the following changes
+will be made automatically to the `modw_cloud` schema during the upgrade:
+
+- Fix a bug in which extraneous rows appear in the `instance_type` table. This
+  is accomplished by the following:
+    - The following tables in `modw_cloud` will have the `disk_gb` column added
+      to them:
+        - `instance_data`
+        - `generic_cloud_raw_event`
+        - `generic_cloud_staging_event`
+        - `openstack_staging_event`
+    - The `disk_gb` values in `instance_type` will be copied into
+      `instance_data`.
+    - Ingestion will occur through the following tables, removing the `disk_gb`
+      column. Any duplicate rows in `instance_type` will also be removed.
+        - `instance_type` → `instance_type_union` → `instance_type_change_flag`
+          → `instance_type_config_group.json` → `instance_type_grouped` →
+          `instance_type_staging` → `instance_type`
+- Improve query performance by adding the aggregation unit (day, month,
+  quarter, or year) IDs to indexes of the aggregate tables in the Jobs, Cloud,
+  Storage, and Resource Specifications realms.
 
 [github-release]: https://github.com/ubccr/xdmod/releases/tag/v{{ page.rpm_version }}
 [mysql-config]: configuration.html#mariadb-configuration
