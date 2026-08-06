@@ -1,29 +1,32 @@
 # Open XDMoD Change Log
 
-## 2026-07-23 v11.0.4
+## 2026-08-06 v11.0.4
 
 - Important Notes
     - This release fixes a low severity security vulnerability in Open XDMoD:
         - https://github.com/ubccr/xdmod/security/advisories/GHSA-3gcq-4wrp-27g5
-- Enhancements
-    - Added composite index on aggregate table to improve performance of database queries
-    ([\#2199](https://github.com/ubccr/xdmod/pull/2199))
 - Bug Fixes
-    - Fixes a bug in which corrects `disk_gb` to be a property of `event` not `instance`.
-      This fixes many extraneous rows present in `modw_cloud.instance_type`.
-      ([\#2251](https://github.com/ubccr/xdmod/pull/2251))
-    - Fix bug in which the Wall Hours: Per Session statistic was miscalcuated.
-      ([\#2196](https://github.com/ubccr/xdmod/pull/2196))
-    - Fix bug in which a migration pipeline could run without checking if
-      `modw_cloud.event` table existing.
-      ([\#2237](https://github.com/ubccr/xdmod/pull/2237))
-    - Fix bug with job efficiency dashboard componenet chart not rendering.
-      ([\#2270](https://github.com/ubccr/xdmod/pull/2270))
-    - Fix bug with job viewer plots using incorrect line style with null values.
-      ([\#2269](https://github.com/ubccr/xdmod/pull/2269))
+    - Fix extraneous rows appearing in the `modw_cloud.instance_type` table
+      ([\#2251](https://github.com/ubccr/xdmod/pull/2251),
+      [\#2262](https://github.com/ubccr/xdmod/pull/2262)).
+    - Fix calculation of the Cloud realm's "Wall Hours: Per Session" metric
+      ([\#2196](https://github.com/ubccr/xdmod/pull/2196)).
+    - Fix migrations for versions 10.5.1 -> 11.0.0 -> 11.0.1
+      ([\#2237](https://github.com/ubccr/xdmod/pull/2237)).
+    - Fix rendering bug with job efficiency dashboard component
+      ([\#2270](https://github.com/ubccr/xdmod/pull/2270)).
+    - Fix display of timeseries plots in the Job Viewer tab
+      ([\#2269](https://github.com/ubccr/xdmod/pull/2269)).
+    - Add missing metadata and image alt text to the maintenance page
+      ([\#2269](https://github.com/ubccr/xdmod/pull/2269)).
+- Enhancements
+    - Add login screen for tutorial accounts
+      ([\#2238](https://github.com/ubccr/xdmod/pull/2238)).
+    - Improve performance of database queries
+      ([\#2199](https://github.com/ubccr/xdmod/pull/2199)).
 - Maintenance / Code Quality
-    - Refactored chart generation during export
-      ([\#2272](https://github.com/ubccr/xdmod/pull/2272))
+    - Refactor chart generation during export
+      ([\#2272](https://github.com/ubccr/xdmod/pull/2272)).
 
 ## 2026-05-12 v11.0.3
 
