@@ -456,17 +456,18 @@ not enabled.
 For installations in which the Cloud realm is enabled, the following changes
 will be made automatically to the `modw_cloud` schema during the upgrade to fix
 a bug in which extraneous rows appear in the `instance_type` table:
-    1. Add `disk_gb` column to `instance_data`.
-    1. Copy `disk_gb` column from `instance_type` to `instance_data`.
-    1. Ingest through the following tables, dropping the `disk_gb` column along
-       the way:
-        1. `instance_type_union`
-        1. `instance_type_change_flag`
-        1. `instance_type_config_group.json`
-        1. `instance_type_grouped`
-        1. `instance_type_staging`
-        1. `instance_type`
-    1. Reaggregate all of the Cloud realm.
+
+1. Add `disk_gb` column to `instance_data`.
+1. Copy `disk_gb` column from `instance_type` to `instance_data`.
+1. Ingest through the following tables, dropping the `disk_gb` column along
+   the way:
+    1. `instance_type_union`
+    1. `instance_type_change_flag`
+    1. `instance_type_config_group.json`
+    1. `instance_type_grouped`
+    1. `instance_type_staging`
+    1. `instance_type`
+1. Reaggregate all of the Cloud realm.
 
 The next time you shred and ingest cloud data, the following tables will also
 have the `disk_gb` column added or dropped:
