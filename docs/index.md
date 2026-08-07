@@ -34,6 +34,8 @@ wait time, and wall time, with minimum, maximum and the average of
 these metrics, in addition to many others.  Metrics are organized by a
 customizable hierarchy appropriate for your organization.
 
+Open XDMoD also features a [Data Analytics Framework](data-analytics-framework.md) that provides API access to the data in the portal.
+
 The base Open XDMoD software supports monitoring
 and analysis of HPC batch computing systems, OpenStack-based clouds
 and compute storage. Other features are enabled via optional modules:
