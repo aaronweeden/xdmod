@@ -44,7 +44,7 @@
         ],
 
         "groupby": [
-            "resource_id", "instance_type", "display", "num_cores", "memory_mb", "description"
+            "resource_id", "instance_type", "display", "num_cores", "memory_mb","description"
         ]
     }
 }
