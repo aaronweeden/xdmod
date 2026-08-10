@@ -20,7 +20,7 @@
                 }
             }
         },
-        "set-storage-resource": {
+        "set-storage-resource-organization": {
             "namespace": "ETL\\Maintenance",
             "options_class": "MaintenanceOptions",
             "class": "ExecuteSql",
