@@ -726,7 +726,6 @@ class AggregateChart
             $this->_aggregationUnit,
             $data_series,
             $global_filters,
-            $this->_queryType,
             $this->user
         );
 
