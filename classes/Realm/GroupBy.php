@@ -8,6 +8,7 @@ namespace Realm;
 
 use CCR\DB;
 use ETL\DbModel\Query as DbQuery;
+use \DataWarehouse\Query\iQuery;
 use \DataWarehouse\Query\Model\OrderBy;
 use \DataWarehouse\Query\Model\Parameter;
 use \DataWarehouse\Query\Model\Schema;
@@ -15,6 +16,7 @@ use \DataWarehouse\Query\Model\Field;
 use \DataWarehouse\Query\Model\Table;
 use \DataWarehouse\Query\Model\TableField;
 use \DataWarehouse\Query\Model\WhereCondition;
+use \DataWarehouse\Query\TimeAggregationUnit;
 use Psr\Log\LoggerInterface;
 
 class GroupBy extends \CCR\Loggable implements iGroupBy
@@ -61,12 +63,6 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
      */
 
     protected $attributeTableSchema = null;
-
-    /**
-     * @var string Name of the table where attributes are stored.
-     */
-
-    protected $attributeTableName = null;
 
     /**
      * @var \DataWarehouse\Query\Model\Table Attribute table object.
@@ -435,9 +431,6 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                 case 'disabled':
                     $this->disabled = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                     break;
-                case 'is_aggregation_unit':
-                    $this->isAggregationUnit = filter_var($value, FILTER_VALIDATE_BOOLEAN);
-                    break;
                 case 'module':
                     $this->moduleName = trim($value);
                     break;
@@ -469,29 +462,56 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             $this->logAndThrowException('The attribute_values_query key must specify id, short_name, and name columns');
         }
 
+        if ( $this->attributeDescriptionSql && count($this->attributeToAggregateKeyMap) > 1 ){
+            $this->logAndThrowException('The attribute_description_query does not work with more than one ');
+        }
+
+        // Determine if this is an aggregation unit
+        $this->isAggregationUnit = TimeAggregationUnit::isTimeAggregationUnitName($this->id);
+
         // Ensure that the schema of the joins in the attributes_values_query defaults to the attributes_value_schema
         $joins = $this->attributeValuesQuery->joins;
         foreach ($joins as $join) {
             if (!isset($join->schema)) {
                 $join->schema = $this->attributeTableSchema;
             }
+            if (isset($join->alias)) {
+                $join->alias = $this->getTableAlias($join->alias);
+            } elseif ($this->isAggregationUnit()) {
+                $join->alias = iQuery::DATE_TABLE_ALIAS;
+            } else {
+                $join->alias = $this->getTableAlias($join->name);
+            }
         }
         $this->attributeValuesQuery->joins = $joins;
         $this->attributeValuesQueryAsStdClass = $this->attributeValuesQuery->toStdClass();
-        $this->attributeTableName = trim($this->attributeValuesQuery->joins[0]->name);
-
-        if ( $this->attributeDescriptionSql && count($this->attributeToAggregateKeyMap) > 1 ){
-            $this->logAndThrowException('The attribute_description_query does not work with more than one ');
-        }
-
-        // Note that we are using the table name itself as an alias. If needed, we can add an
-        // alias to the group by configuration specification.
-
         $this->attributeTableObj = new Table(
             new Schema($this->attributeTableSchema),
-            $this->attributeTableName,
-            $this->attributeTableName
+            trim($joins[0]->name),
+            trim($joins[0]->alias)
         );
+        foreach ($joins as $join) {
+            if (isset($join->on)) {
+                $join->on = $this->verifyAndReplaceTableAlias($join->on);
+            }
+        }
+        $this->attributeValuesQuery->joins = $joins;
+        $records = $this->attributeValuesQuery->records;
+        foreach ($records as $key => $value) {
+            $records[$key] = $this->verifyAndReplaceTableAlias($value);
+        }
+        $this->attributeValuesQuery->records = (object)$records;
+        foreach (['orderby', 'where'] as $prop) {
+            $propDefs = $this->attributeValuesQuery->$prop ?? null;
+            if (null !== ($propDefs)) {
+                $newPropDefs = [];
+                foreach ($propDefs as $propDef) {
+                    $newPropDefs[] = $this->verifyAndReplaceTableAlias($propDef);
+                }
+                $this->attributeValuesQuery->$prop = $newPropDefs;
+            }
+        }
+        $this->attributeValuesQueryAsStdClass = $this->attributeValuesQuery->toStdClass();
 
         // If alternate groupby columns have been proivided, ensure that there are the same number
         // as the attribute to aggregate column map.
@@ -582,7 +602,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
 
     public function getAttributeTable($includeSchema = true)
     {
-        return ( $includeSchema ? sprintf("%s.", $this->attributeTableSchema) : "" ) . $this->attributeTableName;
+        return ( $includeSchema ? sprintf("%s.", $this->attributeTableSchema) : "" ) . $this->attributeTableObj->getAlias();
     }
 
     /**
@@ -732,7 +752,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         $aggregateFilters = array();
         $requestFilters = $this->pullFilterValuesFromRequest($request);
 
-        if ( ($this->isAggregationUnit && 'none' == $this->id) || 0 == count($requestFilters) ) {
+        if ( ('none' == $this->id) || 0 == count($requestFilters) ) {
             return $filterList;
         }
 
@@ -792,7 +812,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         $requestFilters = $this->pullFilterValuesFromRequest($request);
         $filterCount = count($requestFilters);
 
-        if ( ($this->isAggregationUnit && 'none' == $this->id) ||  0 == $filterCount ) {
+        if ( ('none' == $this->id) ||  0 == $filterCount ) {
             return $labelList;
         }
 
@@ -899,7 +919,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
      * @see iGroupBy::applyTo()
      */
 
-    public function applyTo(\DataWarehouse\Query\iQuery $query, $multi_group = false)
+    public function applyTo(iQuery $query, $multi_group = false)
     {
         // Apply this GroupBy to the given Query. Note tha the query may have multiple GroupBys and
         // other SELECT fields, but this essentially translates the following SQL:
@@ -926,14 +946,14 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         // When applying an aggregation unit GroupBy the aggregation tables will already have been
         // added by Query::setDuration()
 
-        if ( ! $this->isAggregationUnit ) {
+        if ( ! $this->isAggregationUnit && 'none' != $this->id ) {
             // Only the first table is added to the join. If you need another table
             // to be joined then use the additional_join_constraints
             foreach ($this->attributeValuesQuery->joins as $join) {
                 $query->addTable(new Table(
                     new Schema($join->schema),
                     $join->name,
-                    $join->name
+                    $join->alias
                 ));
                 if ($this->additionalJoinConstraints === null) {
                     break;
@@ -941,7 +961,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             }
         }
 
-        if ( $this->isAggregationUnit && 'none' == $this->id ) {
+        if ( 'none' == $this->id ) {
 
             // Group by none is a special case of time aggregation where there is no group by. Here,
             // we do not use the attribute_to_aggregate_key_map at all for the id fields, but rather
@@ -958,7 +978,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             // sprintf('%s_id', $groupById)
 
             $alias = $this->qualifyColumnName('id', true);
-            $formula = $this->verifyAndReplaceTableAlias($this->attributeValuesQuery->getRecord('id'), $query);
+            $formula = $this->verifyAndReplaceTableAlias($this->attributeValuesQuery->getRecord('id'));
             $field = new Field($formula, $alias);
             $query->addField($field);
 
@@ -970,10 +990,8 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
 
             foreach ( $this->attributeToAggregateKeyMap as $attributeKey => $aggregateKey ) {
                 $alias = $this->qualifyColumnName($attributeKey, true);
-                // Aggregation unit group bys use the date table rather than the attribute table
-                $tableObj = ( $this->isAggregationUnit ? $query->getDateTable() : $this->attributeTableObj );
                 $groupByField = new TableField(
-                    $tableObj,
+                    $this->attributeTableObj,
                     ($useAlternateGroupBy ? $this->alternateGroupByColumns[$mapIndex++] : $attributeKey),
                     $alias
                 );
@@ -981,17 +999,24 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
 
                 // The aggregation unit where condition is already added by Query::setDuration()
 
-                if ( ! $this->isAggregationUnit ) {
+                if ( ! $this->isAggregationUnit && 'none' != $this->id) {
                     $pieces = explode('.', $attributeKey);
                     if ( count($pieces) === 2 ) {
-                        $alternateAttributeTableObj = new Table($this->attributeTableObj->getSchema(), $pieces[0], $pieces[0]);
+                        $alternateAttributeTableObj = new Table(
+                            $this->attributeTableObj->getSchema(),
+                            $pieces[0],
+                            $this->getTableAlias($pieces[0])
+                        );
                         $attributeKey = $pieces[1];
                     } else {
                         $alternateAttributeTableObj = null;
                     }
 
                     $where = new WhereCondition(
-                        new TableField(!empty($alternateAttributeTableObj) ? $alternateAttributeTableObj : $tableObj, $attributeKey),
+                        new TableField(
+                            !empty($alternateAttributeTableObj) ? $alternateAttributeTableObj : $this->attributeTableObj,
+                            $attributeKey
+                        ),
                         '=',
                         new TableField($query->getDataTable(), $aggregateKey)
                     );
@@ -1005,9 +1030,29 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         if ( null !== $this->additionalJoinConstraints ) {
             foreach ( $this->additionalJoinConstraints as $constraint ) {
                 $where = new WhereCondition(
-                    new TableField(!empty($constraint->attribute_table) ? new Table($this->attributeTableObj->getSchema(), $constraint->attribute_table, $constraint->attribute_table) : $this->attributeTableObj, $constraint->attribute_expr),
+                    new TableField(
+                        (
+                            !empty($constraint->attribute_table)
+                            ? new Table(
+                                $this->attributeTableObj->getSchema(),
+                                $constraint->attribute_table,
+                                $this->getTableAlias($constraint->attribute_table)
+                            ) : $this->attributeTableObj
+                        ),
+                        $constraint->attribute_expr
+                    ),
                     $constraint->operation,
-                    new TableField(!empty($constraint->aggregate_table) ? new Table($query->getDataTable()->getSchema(), $constraint->aggregate_table, $constraint->aggregate_table) : $query->getDataTable(), $constraint->aggregate_expr)
+                    new TableField(
+                        (
+                            !empty($constraint->aggregate_table)
+                            ? new Table(
+                                $query->getDataTable()->getSchema(),
+                                $constraint->aggregate_table,
+                                $constraint->aggregate_table
+                            ) : $query->getDataTable()
+                        ),
+                        $constraint->aggregate_expr
+                    )
                 );
                 $query->addWhereCondition($where);
             }
@@ -1066,7 +1111,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                 : sprintf('%s_%s', $query->getAggregationUnit(), $fieldName)
             );
 
-            $field = new Field($this->verifyAndReplaceTableAlias($formula, $query), $alias);
+            $field = new Field($this->verifyAndReplaceTableAlias($formula), $alias);
             $query->addField($field);
         }
 
@@ -1083,13 +1128,11 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
      * an SQL formula (such as CONCAT(rf.name, '-'. rf.code)). Since the attribute values query is
      * self contained, the alias used may or may not match that of the attribute table specified for
      * this group by. If an alias is specified, ensure that the table it refers to matches the
-     * attribute table for this group by and change the alias to the table name. If the formula did
-     * not contain an alias, explicitly add the table name so we do not have ambiguous columns in
+     * attribute table for this group by and change the alias to the table alias. If the formula did
+     * not contain an alias, explicitly add the table alias so we do not have ambiguous columns in
      * the query.
      *
      * @param string $formula The SQL column or formula
-     *
-     * @param Query $query Used to determine the table alias when the GroupBy is an aggregation unit.
      *
      * @return string The formula with aliases changed to the group by table alias, or with an alias
      *   added if only a column was specified.
@@ -1098,10 +1141,10 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
      *   did not match the group by attribute table.
      */
 
-    protected function verifyAndReplaceTableAlias($formula, \DataWarehouse\Query\iQuery $query)
+    protected function verifyAndReplaceTableAlias($formula)
     {
         $formula = $this->realm->getVariableStore()->substitute($formula);
-        if ( $this->isAggregationUnit && 'none' == $this->id ) {
+        if ( 'none' == $this->id ) {
             return $formula;
         }
 
@@ -1109,11 +1152,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         if ( 0 === preg_match_all('/([a-zA-Z0-9$_]+\.)?([a-zA-Z0-9$_]+\.[a-zA-Z0-9$_]+)/', $formula, $matches, PREG_SET_ORDER) ) {
             // The formula did not contain an aliased column name, assume that it is only a column
             // name and add our table alias.
-            return sprintf(
-                "%s.%s",
-                ( $this->isAggregationUnit ? $query->getDateTable()->getAlias() : $this->attributeTableName ),
-                $formula
-            );
+            return sprintf("%s.%s", $this->attributeTableObj->getAlias(), $formula);
         }
 
         foreach ( $matches as $match ) {
@@ -1124,29 +1163,22 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             }
 
             // We have found a column name that includes an alias. Ensure that the table referenced
-            // by the alias is the same as the attribute table for this group by.
+            // by the alias is the same as one of the joins or the attribute table.
             list($tableAlias, $column) = explode('.', $match[2]);
+            $newTableAlias = null;
             foreach ( $this->attributeValuesQueryAsStdClass->joins as $joinObj ) {
-                if ( isset($joinObj->alias) && $joinObj->alias == $tableAlias && $joinObj->name != $this->attributeTableName ) {
-                    $this->logAndThrowException(
-                        sprintf(
-                            "Table for alias '%s' in attribute_value_query field '%s' refers to '%s' != group by attribute_table '%s'",
-                            $tableAlias,
-                            'short_name',
-                            $joinObj->name,
-                            $this->attributeTableName
-                        )
-                    );
+                if ($tableAlias == $joinObj->name || $tableAlias == $this->getIdentifierFromTableAlias($joinObj->alias)) {
+                    $newTableAlias = $joinObj->alias;
+                    break;
                 }
+            }
+            if (null === $newTableAlias) {
+                $newTableAlias = $this->attributeTableObj->getAlias();
             }
             // Replace the table alias with the actual table name
             $formula = str_replace(
                 $match[2],
-                sprintf(
-                    "%s.%s",
-                    ( $this->isAggregationUnit ? $query->getDateTable()->getAlias() : $this->attributeTableName ),
-                    $column
-                ),
+                sprintf("%s.%s", $newTableAlias, $column),
                 $formula
             );
         }
@@ -1159,11 +1191,11 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
      * @see Query::addWhereAndJoin()
      */
 
-    public function addWhereJoin(\DataWarehouse\Query\iQuery $query, $aggregateTableName, $operation, $whereConstraint)
+    public function addWhereJoin(iQuery $query, $aggregateTableName, $operation, $whereConstraint)
     {
         // Group by none is a special case where this method is a no-op
 
-        if ( $this->isAggregationUnit && 'none' == $this->id ) {
+        if ( 'none' == $this->id ) {
             return;
         }
 
@@ -1178,7 +1210,14 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         foreach ( $this->attributeToAggregateKeyMap as $attributeKey => $aggregateKey ) {
             $pieces = explode('.', $attributeKey);
             if ( count($pieces) === 2 ) {
-                $attributeTableField = new TableField(new Table($this->attributeTableObj->getSchema(), $pieces[0], $pieces[0]), $pieces[1]);
+                $attributeTableField = new TableField(
+                    new Table(
+                        $this->attributeTableObj->getSchema(),
+                        $pieces[0],
+                        $this->getTableAlias($pieces[0])
+                    ),
+                    $pieces[1]
+                );
             } else {
                 $attributeTableField = new TableField($this->attributeTableObj, $attributeKey);
             }
@@ -1210,7 +1249,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             $where = new WhereCondition(
                 sprintf(
                     '%s.%s',
-                    $this->attributeTableName,
+                    $this->attributeTableObj->getAlias(),
                     ($useAlternateGroupBy ? $this->alternateGroupByColumns[$mapIndex++] : $attributeKey)
                 ),
                 $operation,
@@ -1225,7 +1264,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
      * @see iGroupBy::addOrder()
      */
 
-    public function addOrder(\DataWarehouse\Query\iQuery $query, $multi_group = false, $direction = 'ASC', $prepend = false)
+    public function addOrder(iQuery $query, $multi_group = false, $direction = 'ASC', $prepend = false)
     {
         // There can be zero or more order by fields specified in the attribute values query. Add an
         // order by clause for each of them.
@@ -1238,7 +1277,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
 
         foreach ( $queryConfig->orderby as $orderByField ) {
             $orderBy = new OrderBy(
-                new Field($this->verifyAndReplaceTableAlias($orderByField, $query)),
+                new Field($this->verifyAndReplaceTableAlias($orderByField)),
                 $direction,
                 $this->id
             );
@@ -1268,7 +1307,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         // To handle possible ambiguous columns in the attribute values query, be sure to alias the
         // where conditions with the attribute table (first table).
 
-        $alias = (isset($queryConfig->joins[0]->alias) ? $queryConfig->joins[0]->alias : $this->attributeTableName);
+        $alias = (isset($queryConfig->joins[0]->alias) ? $queryConfig->joins[0]->alias : $this->attributeTableObj->getAlias());
 
         if ( isset($restrictions['id']) ) {
             $list = explode(self::FILTER_DELIMITER, $restrictions['id']);
@@ -1487,6 +1526,19 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
     public function showAllDimensionValues()
     {
         return $this->showAllDimensionValues;
+    }
+
+    private function getTableAlias($tableName)
+    {
+        return $this->id . '__' . $tableName;
+    }
+
+    private function getIdentifierFromTableAlias($alias)
+    {
+        if (iQuery::DATE_TABLE_ALIAS == $alias) {
+            return $alias;
+        }
+        return explode('__', $alias)[1];
     }
 
     /**

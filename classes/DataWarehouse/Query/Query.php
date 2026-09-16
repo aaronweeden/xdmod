@@ -185,7 +185,7 @@ class Query extends Loggable
     public function updateVariableStore()
     {
         $this->variableStore->overwrite('QUERY_TYPE', $this->getQueryType());
-        $this->variableStore->overwrite('DATE_TABLE_ID_FIELD', sprintf('%s.id', $this->getDateTable()->getAlias()));
+        $this->variableStore->overwrite('DATE_TABLE_ID_FIELD', sprintf('%s.id', iQuery::DATE_TABLE_ALIAS));
         $this->variableStore->overwrite('MIN_DATE_ID', $this->getMinDateId());
         $this->variableStore->overwrite('MAX_DATE_ID', $this->getMaxDateId());
         $this->variableStore->overwrite('START_DATE_TS', $this->getStartDateTs());
@@ -909,10 +909,6 @@ SQL;
     {
         return $this->_data_table;
     }
-    public function getDateTable()
-    {
-        return $this->_date_table;
-    }
 
     public function getTitle($group_info_only = false)
     {
@@ -1381,7 +1377,11 @@ SQL;
             return;
         }
 
-        $this->_date_table = new \DataWarehouse\Query\Model\Table(new \DataWarehouse\Query\Model\Schema('modw'), $this->_aggregation_unit.'s', 'duration');
+        $this->_date_table = new \DataWarehouse\Query\Model\Table(
+            new \DataWarehouse\Query\Model\Schema('modw'),
+            $this->_aggregation_unit.'s',
+            iQuery::DATE_TABLE_ALIAS
+        );
 
         $this->addTable($this->_date_table);
 

@@ -76,24 +76,24 @@ SELECT
   DATE(duration.day_start) as 'day_short_name',
   DATE(duration.day_start) as 'day_name',
   duration.day_start_ts as 'day_start_ts',
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id',
   COALESCE(SUM(agg.ended_job_count), 0) AS job_count
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.person person
+  modw.person person__person
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
+  AND person__person.id = agg.person_id
 GROUP BY duration.id,
-  person.id
+  person__person.id
 HAVING person_id = 82
 ORDER BY duration.id ASC,
-  person.order_id ASC
+  person__person.order_id ASC
 LIMIT 10 OFFSET 0
 SQL;
         $this->assertEquals($expected, $generated, 'Timeseries query');
@@ -104,22 +104,22 @@ SQL;
 
         $expectedAgg =<<<SQL
 SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id',
   COALESCE(SUM(agg.ended_job_count), 0) AS job_count
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.person person
+  modw.person person__person
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id
+  AND person__person.id = agg.person_id
+GROUP BY person__person.id
 ORDER BY job_count desc,
-  person.order_id ASC
+  person__person.order_id ASC
 LIMIT 10 OFFSET 0
 SQL;
         $this->assertEquals($expectedAgg, $generatedAgg, 'Timeseries associated Aggregate query');
