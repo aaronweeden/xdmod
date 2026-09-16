@@ -62,7 +62,6 @@ class AggregateChart
     protected $_xAxisLabel;
     protected $_multiCategory = false;
     protected $_prevCategory = null;
-    protected $_queryType = 'aggregate';
 
     protected $_subtitleText = '';
 
