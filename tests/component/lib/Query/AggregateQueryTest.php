@@ -79,20 +79,20 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
         $generated = $query->getQueryString();
         $expected  =<<<SQL
 SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id'
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id'
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.person person
+  modw.person person__person
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id
-ORDER BY person.order_id ASC
+  AND person__person.id = agg.person_id
+GROUP BY person__person.id
+ORDER BY person__person.order_id ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query no statistic');
     }
@@ -115,20 +115,20 @@ SQL;
         $generated = $query->getQueryString();
         $expected  =<<<SQL
 SELECT
-  systemaccount.username as 'username_id',
-  systemaccount.username as 'username_short_name',
-  systemaccount.username as 'username_name',
-  systemaccount.username as 'username_order_id'
+  username__systemaccount.username as 'username_id',
+  username__systemaccount.username as 'username_short_name',
+  username__systemaccount.username as 'username_name',
+  username__systemaccount.username as 'username_order_id'
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.systemaccount systemaccount
+  modw.systemaccount username__systemaccount
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND systemaccount.id = agg.systemaccount_id
-GROUP BY systemaccount.username
-ORDER BY systemaccount.username ASC
+  AND username__systemaccount.id = agg.systemaccount_id
+GROUP BY username__systemaccount.username
+ORDER BY username__systemaccount.username ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query with alternate group by column');
     }
@@ -156,22 +156,22 @@ SQL;
         $generated = $query->getQueryString();
         $expected  =<<<SQL
 SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id',
   COALESCE(SUM(CASE duration.id WHEN 201600357 THEN agg.running_job_count ELSE agg.started_job_count END), 0) AS running_job_count,
   COALESCE(SUM(agg.ended_job_count), 0) AS job_count
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.person person
+  modw.person person__person
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id
-ORDER BY person.order_id ASC
+  AND person__person.id = agg.person_id
+GROUP BY person__person.id
+ORDER BY person__person.order_id ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query group by and main statistic');
     }
@@ -234,21 +234,21 @@ SQL;
         $generated = $query->getQueryString();
         $expected  =<<<SQL
 SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id',
   COALESCE(SUM(agg.ended_job_count), 0) AS job_count
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.person person
+  modw.person person__person
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id
-ORDER BY person.order_id ASC
+  AND person__person.id = agg.person_id
+GROUP BY person__person.id
+ORDER BY person__person.order_id ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query add group by and statistic');
     }
@@ -281,22 +281,22 @@ SQL;
         $generated = $query->getQueryString(10, 0); // Also test limit=10 and offset=0
         $expected  =<<<SQL
 SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id',
   COALESCE(SUM(agg.ended_job_count), 0) AS job_count
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.person person
+  modw.person person__person
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id
+  AND person__person.id = agg.person_id
+GROUP BY person__person.id
 ORDER BY job_count desc,
-  person.order_id ASC
+  person__person.order_id ASC
 LIMIT 10 OFFSET 0
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query with group by add statistic');
@@ -311,13 +311,13 @@ FROM (
   FROM
     modw_aggregates.jobfact_by_day agg,
     modw.days duration,
-    modw.person person
+    modw.person person__person
   WHERE
     duration.id = agg.day_id
     AND agg.day_id between 201600357 and 201700001
-    AND person.id = agg.person_id
+    AND person__person.id = agg.person_id
   GROUP BY
-    person.id
+    person__person.id
 ) AS a WHERE a.total IS NOT NULL
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query count with group by add statistic ');
@@ -352,23 +352,23 @@ SQL;
         $generated = $query->getQueryString();
         $expected  =<<<SQL
 SELECT
-  queue.id as 'queue_id',
-  queue.id as 'queue_short_name',
-  queue.id as 'queue_name',
-  queue.id as 'queue_order_id',
+  queue__queue.id as 'queue_id',
+  queue__queue.id as 'queue_short_name',
+  queue__queue.id as 'queue_name',
+  queue__queue.id as 'queue_order_id',
   COALESCE(SUM(agg.ended_job_count), 0) AS job_count
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.queue queue
+  modw.queue queue__queue
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND queue.id = agg.queue
-  AND queue.resource_id = agg.task_resource_id
-GROUP BY queue.id
+  AND queue__queue.id = agg.queue
+  AND queue__queue.resource_id = agg.task_resource_id
+GROUP BY queue__queue.id
 ORDER BY job_count desc,
-  queue.id ASC
+  queue__queue.id ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Additional join constraint');
     }
@@ -452,21 +452,21 @@ SQL;
     {
         $expected =<<<SQL
 SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id'
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id'
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.person person
+  modw.person person__person
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-  AND person.id > ('constraint')
-GROUP BY person.id
-ORDER BY person.order_id ASC
+  AND person__person.id = agg.person_id
+  AND person__person.id > ('constraint')
+GROUP BY person__person.id
+ORDER BY person__person.order_id ASC
 SQL;
 
         $query = new \DataWarehouse\Query\AggregateQuery(
@@ -529,13 +529,13 @@ FROM (
   FROM
     modw_aggregates.jobfact_by_day agg,
     modw.days duration,
-    modw.person person
+    modw.person person__person
   WHERE
     duration.id = agg.day_id
     AND agg.day_id between 201600357 and 201700001
-    AND person.id = agg.person_id
+    AND person__person.id = agg.person_id
   GROUP BY
-    person.id
+    person__person.id
 ) AS a WHERE a.total IS NOT NULL
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query count');
@@ -563,14 +563,14 @@ SQL;
         $generated = $query->getDimensionValuesQuery();
         $expected =<<<SQL
 SELECT
-  person.id AS id,
-  person.long_name AS name,
-  person.short_name AS short_name,
-  person.order_id AS _dimensionOrderValue
-FROM modw.person person
-WHERE person.id IN ( SELECT modw_filters.Jobs_person.person FROM modw_filters.Jobs_person )
-GROUP BY person.id
-ORDER BY person.order_id ASC
+  person__person.id AS id,
+  person__person.long_name AS name,
+  person__person.short_name AS short_name,
+  person__person.order_id AS _dimensionOrderValue
+FROM modw.person person__person
+WHERE person__person.id IN ( SELECT modw_filters.Jobs_person.person FROM modw_filters.Jobs_person )
+GROUP BY person__person.id
+ORDER BY person__person.order_id ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query dimension values');
     }

@@ -484,13 +484,10 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             $this->logAndThrowException('The attribute_description_query does not work with more than one ');
         }
 
-        // Note that we are using the table name itself as an alias. If needed, we can add an
-        // alias to the group by configuration specification.
-
         $this->attributeTableObj = new Table(
             new Schema($this->attributeTableSchema),
             $this->attributeTableName,
-            $this->attributeTableName
+            $this->id . '__' . $this->attributeTableName
         );
 
         // If alternate groupby columns have been proivided, ensure that there are the same number
@@ -582,7 +579,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
 
     public function getAttributeTable($includeSchema = true)
     {
-        return ( $includeSchema ? sprintf("%s.", $this->attributeTableSchema) : "" ) . $this->attributeTableName;
+        return ( $includeSchema ? sprintf("%s.", $this->attributeTableSchema) : "" ) . $this->attributeTableObj->getAlias();
     }
 
     /**
@@ -933,7 +930,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                 $query->addTable(new Table(
                     new Schema($join->schema),
                     $join->name,
-                    $join->name
+                    $this->id . '__' . $join->name
                 ));
                 if ($this->additionalJoinConstraints === null) {
                     break;
@@ -984,7 +981,11 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                 if ( ! $this->isAggregationUnit ) {
                     $pieces = explode('.', $attributeKey);
                     if ( count($pieces) === 2 ) {
-                        $alternateAttributeTableObj = new Table($this->attributeTableObj->getSchema(), $pieces[0], $pieces[0]);
+                        $alternateAttributeTableObj = new Table(
+                            $this->attributeTableObj->getSchema(),
+                            $pieces[0],
+                            $this->id . '__' . $pieces[0]
+                        );
                         $attributeKey = $pieces[1];
                     } else {
                         $alternateAttributeTableObj = null;
@@ -1005,9 +1006,29 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         if ( null !== $this->additionalJoinConstraints ) {
             foreach ( $this->additionalJoinConstraints as $constraint ) {
                 $where = new WhereCondition(
-                    new TableField(!empty($constraint->attribute_table) ? new Table($this->attributeTableObj->getSchema(), $constraint->attribute_table, $constraint->attribute_table) : $this->attributeTableObj, $constraint->attribute_expr),
+                    new TableField(
+                        (
+                            !empty($constraint->attribute_table)
+                            ? new Table(
+                                $this->attributeTableObj->getSchema(),
+                                $constraint->attribute_table,
+                                $this->id . '__' . $constraint->attribute_table
+                            ) : $this->attributeTableObj
+                        ),
+                        $constraint->attribute_expr
+                    ),
                     $constraint->operation,
-                    new TableField(!empty($constraint->aggregate_table) ? new Table($query->getDataTable()->getSchema(), $constraint->aggregate_table, $constraint->aggregate_table) : $query->getDataTable(), $constraint->aggregate_expr)
+                    new TableField(
+                        (
+                            !empty($constraint->aggregate_table)
+                            ? new Table(
+                                $query->getDataTable()->getSchema(),
+                                $constraint->aggregate_table,
+                                $this->id . '__' . $constraint->aggregate_table
+                            ) : $query->getDataTable()
+                        ),
+                        $constraint->aggregate_expr
+                    )
                 );
                 $query->addWhereCondition($where);
             }
@@ -1111,7 +1132,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             // name and add our table alias.
             return sprintf(
                 "%s.%s",
-                ( $this->isAggregationUnit ? $query->getDateTable()->getAlias() : $this->attributeTableName ),
+                ( $this->isAggregationUnit ? $query->getDateTable()->getAlias() : $this->attributeTableObj->getAlias() ),
                 $formula
             );
         }
@@ -1144,7 +1165,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                 $match[2],
                 sprintf(
                     "%s.%s",
-                    ( $this->isAggregationUnit ? $query->getDateTable()->getAlias() : $this->attributeTableName ),
+                    ( $this->isAggregationUnit ? $query->getDateTable()->getAlias() : $this->attributeTableObj->getAlias() ),
                     $column
                 ),
                 $formula
@@ -1210,7 +1231,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
             $where = new WhereCondition(
                 sprintf(
                     '%s.%s',
-                    $this->attributeTableName,
+                    $this->attributeTableObj->getAlias(),
                     ($useAlternateGroupBy ? $this->alternateGroupByColumns[$mapIndex++] : $attributeKey)
                 ),
                 $operation,
@@ -1268,7 +1289,7 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         // To handle possible ambiguous columns in the attribute values query, be sure to alias the
         // where conditions with the attribute table (first table).
 
-        $alias = (isset($queryConfig->joins[0]->alias) ? $queryConfig->joins[0]->alias : $this->attributeTableName);
+        $alias = (isset($queryConfig->joins[0]->alias) ? $queryConfig->joins[0]->alias : $this->attributeTableObj->getAlias());
 
         if ( isset($restrictions['id']) ) {
             $list = explode(self::FILTER_DELIMITER, $restrictions['id']);
