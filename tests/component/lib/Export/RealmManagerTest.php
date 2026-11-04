@@ -3,7 +3,7 @@
 namespace ComponentTests\Export;
 
 use CCR\Json;
-use ComponentTests\BaseTest;
+use ComponentTests\BaseTestCase;
 use DataWarehouse\Export\RealmManager;
 use Models\Realm;
 use XDUser;
@@ -13,7 +13,7 @@ use XDUser;
  *
  * @coversDefaultClass \DataWarehouse\Export\RealmManager
  */
-class RealmManagerTest extends BaseTest
+class RealmManagerTest extends BaseTestCase
 {
     /**
      * Test artifacts path.

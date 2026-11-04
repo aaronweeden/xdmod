@@ -3,7 +3,7 @@
 namespace ComponentTests\Export;
 
 use CCR\DB;
-use ComponentTests\BaseTest;
+use ComponentTests\BaseTestCase;
 use DataWarehouse\Export\BatchProcessor;
 use DataWarehouse\Export\FileManager;
 use DataWarehouse\Export\QueryHandler;
@@ -14,7 +14,7 @@ use xd_utilities;
  *
  * @coversDefaultClass \DataWarehouse\Export\BatchProcessor
  */
-class BatchProcessTest extends BaseTest
+class BatchProcessTest extends BaseTestCase
 {
     /**
      * Test artifacts path.

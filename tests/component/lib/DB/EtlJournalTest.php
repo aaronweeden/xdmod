@@ -2,9 +2,9 @@
 
 namespace ComponentTests\DB;
 
-use ComponentTests\BaseTest;
+use ComponentTests\BaseTestCase;
 
-class EtlJournalTest extends BaseTest
+class EtlJournalTest extends BaseTestCase
 {
     public function testJournal()
     {

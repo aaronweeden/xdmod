@@ -6,7 +6,7 @@ use CCR\Json;
 use Exception;
 use Models\Services\Parameters;
 
-class ParametersTest extends BaseTest
+class ParametersTest extends BaseTestCase
 {
     /**
      * Exercises the `Parameters::getParameters` function to ensure that it is functioning as expected.

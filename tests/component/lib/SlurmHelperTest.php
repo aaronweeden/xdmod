@@ -13,7 +13,7 @@ use Models\Services\Realms;
  * @group XDMoD-shredder
  * Test the xdmod-slurm-helper executable.
  */
-class SlurmHelperTest extends BaseTest
+class SlurmHelperTest extends BaseTestCase
 {
     /**
      * Test artifacts path.

@@ -5,7 +5,7 @@ namespace ComponentTests;
 use CCR\Log;
 use CCR\DB;
 
-class LoggerTest extends BaseTest
+class LoggerTest extends BaseTestCase
 {
     public function provideFileOutput()
     {

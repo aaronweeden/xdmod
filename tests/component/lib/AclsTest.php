@@ -11,7 +11,7 @@ use Models\Services\Acls;
 use User\Elements\QueryDescripter;
 use XDUser;
 
-class AclsTest extends BaseTest
+class AclsTest extends BaseTestCase
 {
     const GET_QUERY_DESCRIPTERS = 'getQueryDescripters';
     const HAS_DATA_ACCESS = 'hasDataAccess';

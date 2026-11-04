@@ -10,36 +10,9 @@ use CCR\Log as Logger;
 use DataWarehouse\Query\AggregateQuery;
 use Psr\Log\LoggerInterface;
 
-class AggregateQueryTest extends \PHPUnit\Framework\TestCase
+class AggregateQueryTest extends QueryTestCase
 {
-
-    /**
-     * @var LoggerInterface|null
-     */
-    protected static $logger = null;
-
-    public static function setupBeforeClass(): void
-    {
-        // Set up a logger so we can get warnings and error messages
-
-        $conf = array(
-            'file' => false,
-            'db' => false,
-            'mail' => false,
-            'consoleLogLevel' => Logger::EMERG
-        );
-        self::$logger = Logger::factory('PHPUnit', $conf);
-
-        // In order to use a non-standard location for datawarehouse.json we must manually
-        // initialize the Realm class.
-
-        $options = (object) array(
-            'config_file_name' => 'datawarehouse.json',
-            'config_base_dir'  => realpath('../artifacts/xdmod/realm')
-        );
-
-        \Realm\Realm::initialize(self::$logger, $options);
-    }
+    protected static $QUERY_CLASS = '\DataWarehouse\Query\AggregateQuery';
 
     /**
      * Create an aggregate query with no group by or statistic. We will not be able to generate the
@@ -51,13 +24,7 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
     public function testAggregateQueryNoStatisticNoGroupBy()
     {
         $this->expectException(\Exception::class);
-        $query = new \DataWarehouse\Query\AggregateQuery(
-            'Jobs',
-            'day',
-            '2016-12-01',
-            '2017-01-31'
-        );
-        $query->getQueryString();
+        $this->runQueryTest();
     }
 
     /**
@@ -67,36 +34,7 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
 
     public function testAggregateQueryNoStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
-            'Jobs',
-            'day',
-            '2016-12-01',
-            '2017-01-31',
-            'person'
-        );
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id'
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id,
-  person.short_name,
-  person.long_name,
-  person.order_id
-ORDER BY person.order_id ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query no statistic');
+        $this->runQueryTest(['group_by' => 'person']);
     }
 
     /**
@@ -106,33 +44,7 @@ SQL;
 
     public function testAggregateQueryWithAlternateGroupByColumn()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
-            'Jobs',
-            'day',
-            '2016-12-01',
-            '2017-01-31',
-            'username'
-        );
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  systemaccount.username as 'username_id',
-  systemaccount.username as 'username_short_name',
-  systemaccount.username as 'username_name',
-  systemaccount.username as 'username_order_id'
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.systemaccount systemaccount
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND systemaccount.id = agg.systemaccount_id
-GROUP BY systemaccount.username
-ORDER BY systemaccount.username ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query with alternate group by column');
+        $this->runQueryTest(['group_by' => 'username']);
     }
 
     /**
@@ -146,39 +58,10 @@ SQL;
         // available statistics. Note that the order of the statistics in the query are dependent on
         // the oder specified in the config file.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
-            'Jobs',
-            'day',
-            '2016-12-01',
-            '2017-01-31',
-            'person',
-            'job_count'
-        );
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
-  COALESCE(SUM(CASE duration.id WHEN 201600357 THEN agg.running_job_count ELSE agg.started_job_count END), 0) AS running_job_count,
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id,
-  person.short_name,
-  person.long_name,
-  person.order_id
-ORDER BY person.order_id ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query group by and main statistic');
+        $this->runQueryTest([
+            'group_by' => 'person',
+            'statistic' => 'job_count'
+        ]);
     }
 
     /**
@@ -191,34 +74,7 @@ SQL;
         // available statistics. Note that the order of the statistics in the query are dependent on
         // the oder specified in the config file.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
-            'Jobs',
-            'day',
-            '2016-12-01',
-            '2017-01-31',
-            null,
-            'job_count'
-        );
-
-        $generated = $query->getQueryString();
-
-        // The query have have optional group by, order by, and limit fields. Due to the way it is
-        // constructed, the blank line at the end of the query is required if none of these are
-        // present.
-
-        $expected  =<<<SQL
-SELECT
-  COALESCE(SUM(CASE duration.id WHEN 201600357 THEN agg.running_job_count ELSE agg.started_job_count END), 0) AS running_job_count,
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query main statistic no group by');
+        $this->runQueryTest(['statistic' => 'job_count']);
     }
 
     /**
@@ -227,38 +83,10 @@ SQL;
 
     public function testAggregateQueryAddGroupByAndStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
-            'Jobs',
-            'day',
-            '2016-12-01',
-            '2017-01-31'
-        );
-        $query->addGroupBy('person');
-        $query->addStat('job_count');
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id,
-  person.short_name,
-  person.long_name,
-  person.order_id
-ORDER BY person.order_id ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query add group by and statistic');
+        $this->runQueryTest([
+            'add_group_by' => 'person',
+            'add_stat' => 'job_count'
+        ]);
     }
 
     /**
@@ -267,7 +95,7 @@ SQL;
 
     public function testAggregateQueryWithGroupByAddStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -343,7 +171,7 @@ SQL;
 
     public function testAggregateQueryAdditionalJoinConstraint()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -393,7 +221,7 @@ SQL;
 
     public function testAggregateQueryGroupByNone()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -438,7 +266,7 @@ SQL;
 
     public function testAggregateQuerySpecifyGroupBy()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -447,7 +275,7 @@ SQL;
         );
         $generated1 = $query->getQueryString();
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -486,7 +314,7 @@ GROUP BY person.id,
 ORDER BY person.order_id ASC
 SQL;
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -506,7 +334,7 @@ SQL;
 
     public function testGetFormula()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Cloud',
             'day',
             '2017-12-01',
@@ -527,7 +355,7 @@ SQL;
 
     public function testAggregateQueryCount()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -571,7 +399,7 @@ SQL;
         // Note that calling getDimensionValuesQuery() on a query class that specifies start and end
         // dates will fail due to a hard-coded array index reference.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             null,

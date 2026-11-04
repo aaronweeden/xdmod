@@ -2,7 +2,7 @@
 
 namespace ComponentTests\Export;
 
-use ComponentTests\BaseTest;
+use ComponentTests\BaseTestCase;
 use DataWarehouse\Export\FileManager;
 use ZipArchive;
 use xd_utilities;
@@ -12,7 +12,7 @@ use xd_utilities;
  *
  * @coversDefaultClass \DataWarehouse\Export\FileManager
  */
-class FileManagerTest extends BaseTest
+class FileManagerTest extends BaseTestCase
 {
     /**
      * Test artifacts path.

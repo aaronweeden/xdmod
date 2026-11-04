@@ -16,7 +16,7 @@ use ETL\DbModel\Table;
 use ETL\EtlOverseerOptions;
 use ETL\Configuration\EtlConfiguration;
 
-class DbModelTest extends \ComponentTests\ETL\BaseEtlTest
+class DbModelTest extends \ComponentTests\ETL\BaseEtlTestCase
 {
     const TMPDIR_PREFIX = 'xdmod-dbmodel-test';
     private static $tmpDir = null;

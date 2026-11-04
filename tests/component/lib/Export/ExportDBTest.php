@@ -3,13 +3,13 @@
 namespace ComponentTests\Export;
 
 use CCR\DB;
-use ComponentTests\BaseTest;
+use ComponentTests\BaseTestCase;
 use \Exception;
 use \DataWarehouse\Export\QueryHandler;
 use \XDUser;
 
 // Test access to batch_export_requests table, via QueryHandler class.
-class ExportDBTest extends BaseTest
+class ExportDBTest extends BaseTestCase
 {
     private static $dbh = null;
 

@@ -17,7 +17,7 @@ use IntegrationTests\TestHarness\TestFiles;
  * modify the isDeveloper function.
  * @group skip
  **/
-class XDUserTest extends BaseTest
+class XDUserTest extends BaseTestCase
 {
     private static $users = array();
 
