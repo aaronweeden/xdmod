@@ -991,10 +991,8 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
 
             foreach ( $this->attributeToAggregateKeyMap as $attributeKey => $aggregateKey ) {
                 $alias = $this->qualifyColumnName($attributeKey, true);
-                // Aggregation unit group bys use the date table rather than the attribute table
-                $tableObj = ( $this->isAggregationUnit ? $query->getDateTable() : $this->attributeTableObj );
                 $groupByField = new TableField(
-                    $tableObj,
+                    $this->attributeTableObj,
                     ($useAlternateGroupBy ? $this->alternateGroupByColumns[$mapIndex++] : $attributeKey),
                     $alias
                 );
@@ -1012,7 +1010,14 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
                     }
 
                     $where = new WhereCondition(
-                        new TableField(!empty($alternateAttributeTableObj) ? $alternateAttributeTableObj : $tableObj, $attributeKey),
+                        new TableField(
+                            (
+                                !empty($alternateAttributeTableObj)
+                                ? $alternateAttributeTableObj
+                                : $this->attributeTableObj
+                            ),
+                            $attributeKey
+                        ),
                         '=',
                         new TableField($query->getDataTable(), $aggregateKey)
                     );

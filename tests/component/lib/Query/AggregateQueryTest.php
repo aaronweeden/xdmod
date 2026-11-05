@@ -600,4 +600,145 @@ ORDER BY person__person.order_id ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query dimension values');
     }
+
+    public function testMultiJoin()
+    {
+        $query = new \DataWarehouse\Query\AggregateQuery(
+            'Jobs',
+            'day',
+            '2016-12-01',
+            '2017-01-31',
+            'resource'
+        );
+
+        $generated = $query->getQueryString();
+        $expected =<<<SQL
+SELECT
+  CONCAT(resource__rf.id, '^', resource__rf.code) as 'resource_id',
+  resource__rf.code as 'resource_short_name',
+  CONCAT(resource__rf.name, '-', resource__rf.code) as 'resource_name',
+  resource__rf.id as 'resource_order_id'
+FROM
+  modw_aggregates.jobfact_by_day agg,
+  modw.days duration,
+  modw.resourcefact resource__rf,
+  modw.resourcespecs resource__rs
+WHERE
+  duration.id = agg.day_id
+  AND agg.day_id between 201600357 and 201700001
+  AND resource__rf.id = agg.record_resource_id
+  AND resource__rf.code = agg.resource_code
+  AND resource__resourcefact.id = resourcespecs.resource_id
+GROUP BY resource__rf.id,
+  resource__rf.code,
+  resource__rf.code,
+  CONCAT(resource__rf.name, '-', resource__rf.code),
+  resource__rf.id
+ORDER BY resource__rf.code ASC,
+  resource__rf.name ASC
+SQL;
+        $this->assertEquals($expected, $generated);
+    }
+
+    public function testAddSecondGroupBy()
+    {
+        $query = new \DataWarehouse\Query\AggregateQuery(
+            'Jobs',
+            'day',
+            '2016-12-01',
+            '2017-01-31',
+            'person'
+        );
+        $query->addGroupBy('resource');
+
+        $generated = $query->getQueryString();
+        $expected =<<<SQL
+SELECT
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id',
+  CONCAT(resource__rf.id, '^', resource__rf.code) as 'resource_id',
+  resource__rf.code as 'resource_short_name',
+  CONCAT(resource__rf.name, '-', resource__rf.code) as 'resource_name',
+  resource__rf.id as 'resource_order_id'
+FROM
+  modw_aggregates.jobfact_by_day agg,
+  modw.days duration,
+  modw.person person__person,
+  modw.resourcefact resource__rf,
+  modw.resourcespecs resource__rs
+WHERE
+  duration.id = agg.day_id
+  AND agg.day_id between 201600357 and 201700001
+  AND person__person.id = agg.person_id
+  AND resource__rf.id = agg.record_resource_id
+  AND resource__rf.code = agg.resource_code
+  AND resource__resourcefact.id = resourcespecs.resource_id
+GROUP BY person__person.id,
+  person__person.short_name,
+  person__person.long_name,
+  person__person.order_id,
+  resource__rf.id,
+  resource__rf.code,
+  resource__rf.code,
+  CONCAT(resource__rf.name, '-', resource__rf.code),
+  resource__rf.id
+ORDER BY person__person.order_id ASC,
+  resource__rf.code ASC,
+  resource__rf.name ASC
+SQL;
+        $this->assertEquals($expected, $generated);
+    }
+
+    public function testAddTwoGroupBys()
+    {
+        $query = new \DataWarehouse\Query\AggregateQuery(
+            'Jobs',
+            'day',
+            '2016-12-01',
+            '2017-01-31'
+        );
+        $query->addGroupBy('person');
+        $query->addGroupBy('resource');
+
+        $generated = $query->getQueryString();
+        $expected =<<<SQL
+SELECT
+  person__person.id as 'person_id',
+  person__person.short_name as 'person_short_name',
+  person__person.long_name as 'person_name',
+  person__person.order_id as 'person_order_id',
+  CONCAT(resource__rf.id, '^', resource__rf.code) as 'resource_id',
+  resource__rf.code as 'resource_short_name',
+  CONCAT(resource__rf.name, '-', resource__rf.code) as 'resource_name',
+  resource__rf.id as 'resource_order_id'
+FROM
+  modw_aggregates.jobfact_by_day agg,
+  modw.days duration,
+  modw.person person__person,
+  modw.resourcefact resource__rf,
+  modw.resourcespecs resource__rs
+WHERE
+  duration.id = agg.day_id
+  AND agg.day_id between 201600357 and 201700001
+  AND person__person.id = agg.person_id
+  AND resource__rf.id = agg.record_resource_id
+  AND resource__rf.code = agg.resource_code
+  AND resource__resourcefact.id = resourcespecs.resource_id
+GROUP BY person__person.id,
+  person__person.short_name,
+  person__person.long_name,
+  person__person.order_id,
+  resource__rf.id,
+  resource__rf.code,
+  resource__rf.code,
+  CONCAT(resource__rf.name, '-', resource__rf.code),
+  resource__rf.id
+ORDER BY person__person.order_id ASC,
+  resource__rf.code ASC,
+  resource__rf.name ASC
+SQL;
+        $this->assertEquals($expected, $generated);
+    }
 }
