@@ -12,6 +12,82 @@ use Psr\Log\LoggerInterface;
 
 class AggregateQueryTest extends \PHPUnit\Framework\TestCase
 {
+    const START_DATE = '2016-12-01';
+    const END_DATE = '2017-01-31';
+    const START_DAY_ID = 201600357;
+    const END_DAY_ID = 201700001;
+
+    /**
+     * Expected snippets of SQL that are reused in multiple tests
+     */
+     const EXPECTED_SQL = [
+        'select' => [
+            'none' => [
+                "-9999 as 'none_id'",
+                "'Screwdriver' as 'none_short_name'",
+                "'Screwdriver' as 'none_name'",
+                "'Screwdriver' as 'none_order_id'"
+            ],
+            'person' => [
+                "person__person.id as 'person_id'",
+                "person__person.short_name as 'person_short_name'",
+                "person__person.long_name as 'person_name'",
+                "person__person.order_id as 'person_order_id'"
+            ],
+            'username' => [
+                "username__systemaccount.username as 'username_id'",
+                "username__systemaccount.username as 'username_short_name'",
+                "username__systemaccount.username as 'username_name'",
+                "username__systemaccount.username as 'username_order_id'"
+            ],
+            'queue' => [
+                "queue__queue.id as 'queue_id'",
+                "queue__queue.id as 'queue_short_name'",
+                "queue__queue.id as 'queue_name'",
+                "queue__queue.id as 'queue_order_id'"
+            ],
+            'job_count' => ['COALESCE(SUM(agg.ended_job_count), 0) AS job_count'],
+            'running_job_count' => ['COALESCE(SUM(CASE duration.id WHEN ' . self::START_DAY_ID . ' THEN agg.running_job_count ELSE agg.started_job_count END), 0) AS running_job_count']
+        ],
+        'from' => [
+            'jobs_by_day' => [
+                'modw_aggregates.jobfact_by_day agg',
+                'modw.days duration'
+            ],
+            'person' => ['modw.person person__person'],
+            'username' => ['modw.systemaccount username__systemaccount'],
+            'queue' => ['modw.queue queue__queue']
+        ],
+        'where' => [
+            'jobs_by_day' => [
+                'duration.id = agg.day_id',
+                'agg.day_id between 201600357 and 201700001'
+            ],
+            'person' => ['person__person.id = agg.person_id'],
+            'username' => ['username__systemaccount.id = agg.systemaccount_id'],
+            'queue' => [
+                'queue__queue.id = agg.queue',
+                'queue__queue.resource_id = agg.task_resource_id'
+            ]
+        ],
+        'group_by' => [
+            'person' => [
+                'person__person.id',
+                'person__person.short_name',
+                'person__person.long_name',
+                'person__person.order_id',
+            ],
+            'username' => ['username__systemaccount.username'],
+            'queue' => ['queue__queue.id']
+        ],
+        'order_by' => [
+            'person' => ['person__person.order_id ASC'],
+            'username' => ['username__systemaccount.username ASC'],
+            'queue' => ['queue__queue.id ASC']
+        ]
+    ];
+
+    const ALL_STATS = ['job_count', 'running_job_count'];
 
     /**
      * @var LoggerInterface|null
@@ -26,7 +102,7 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
             'file' => false,
             'db' => false,
             'mail' => false,
-            'consoleLogLevel' => Logger::EMERG
+            'consoleLogLevel' => Logger::WARNING
         );
         self::$logger = Logger::factory('PHPUnit', $conf);
 
@@ -34,11 +110,81 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
         // initialize the Realm class.
 
         $options = (object) array(
-            'config_file_name' => 'datawarehouse.json',
-            'config_base_dir'  => realpath('../artifacts/xdmod/realm')
+            'config_base_dir'  => realpath('../artifacts/xdmod/realm'),
+            'config_file_name' => 'datawarehouse.json'
         );
 
         \Realm\Realm::initialize(self::$logger, $options);
+    }
+
+    /**
+     * Helper function for checking a query string matches the expected value
+     *
+     * @param $actual string the query string that is being tested
+     * @param $options array 
+     */
+    private function runQueryStringTest(string $actual, array $options): void
+    {
+        // Fill in any unspecified options with defaults.
+        $defaultOptions = [
+            'group_bys' => [],
+            'stats' => [],
+            'additional_wheres' => [],
+            'additional_order_bys' => [],
+            'limit' => null,
+            'offset' => null
+        ];
+        $options = array_merge($defaultOptions, $options);
+        if (['all'] === $options['stats']) {
+            $options['stats'] = self::ALL_STATS;
+        }
+        // Piece together the SQL clauses based on the specified $stats and/or $groupBys
+        // and the predefined self::EXPECTED_SQL.
+        $ids = array_merge(['jobs_by_day'], $options['group_bys'], $options['stats']);
+        $sqlClauses = [];
+        foreach (['select', 'from', 'where', 'group_by', 'order_by'] as $clause) {
+            $sqlSnippetsArray = [];
+            foreach ($ids as $id) {
+                $sqlSnippetsArray = array_merge(
+                    $sqlSnippetsArray,
+                    self::EXPECTED_SQL[$clause][$id] ?? []
+                );
+            }
+            if ('where' === $clause && !empty($options['additional_wheres'])) {
+                $sqlSnippetsArray = array_merge(
+                    $sqlSnippetsArray,
+                    $options['additional_wheres']
+                );
+            }
+            if ('order_by' === $clause && !empty($options['additional_order_bys'])) {
+                $sqlSnippetsArray = array_merge(
+                    $options['additional_order_bys'],
+                    $sqlSnippetsArray
+                );
+            }
+            $separator = ",\n  ";
+            if ('where' === $clause) {
+                $separator = "\n  AND ";
+            }
+            $sqlClauses[$clause] = implode($separator, $sqlSnippetsArray);
+        }
+        $sqlClauses['select'] = "SELECT\n  " . $sqlClauses['select'];
+        $sqlClauses['from'] = "\nFROM\n  " . $sqlClauses['from'];
+        $sqlClauses['where'] = "\nWHERE\n  " . $sqlClauses['where'] . "\n";
+        if ('' !== $sqlClauses['group_by']) {
+            $sqlClauses['group_by'] = "GROUP BY\n  " . $sqlClauses['group_by'];
+        }
+        if ('' !== $sqlClauses['order_by']) {
+            $sqlClauses['order_by'] = "\nORDER BY\n  " . $sqlClauses['order_by'];
+        }
+        if (null !== $options['limit']) {
+            $sqlClauses['limit'] = "\nLIMIT " . $options['limit'];
+        }
+        if (null !== $options['offset']) {
+            $sqlClauses['offset'] = " OFFSET " . $options['offset'];
+        }
+        $expected = implode('', array_values($sqlClauses));
+        $this->assertEquals($expected, $actual);
     }
 
     /**
@@ -51,11 +197,11 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
     public function testAggregateQueryNoStatisticNoGroupBy()
     {
         $this->expectException(\Exception::class);
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31'
+            self::START_DATE,
+            self::END_DATE
         );
         $query->getQueryString();
     }
@@ -67,36 +213,17 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
 
     public function testAggregateQueryNoStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31',
+            self::START_DATE,
+            self::END_DATE,
             'person'
         );
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id'
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id,
-  person.short_name,
-  person.long_name,
-  person.order_id
-ORDER BY person.order_id ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query no statistic');
+        $this->runQueryStringTest(
+            $query->getQueryString(),
+            ['group_bys' => ['person']]
+        );
     }
 
     /**
@@ -106,33 +233,17 @@ SQL;
 
     public function testAggregateQueryWithAlternateGroupByColumn()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31',
+            self::START_DATE,
+            self::END_DATE,
             'username'
         );
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  systemaccount.username as 'username_id',
-  systemaccount.username as 'username_short_name',
-  systemaccount.username as 'username_name',
-  systemaccount.username as 'username_order_id'
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.systemaccount systemaccount
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND systemaccount.id = agg.systemaccount_id
-GROUP BY systemaccount.username
-ORDER BY systemaccount.username ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query with alternate group by column');
+        $this->runQueryStringTest(
+            $query->getQueryString(),
+            ['group_bys' => ['username']]
+        );
     }
 
     /**
@@ -146,39 +257,21 @@ SQL;
         // available statistics. Note that the order of the statistics in the query are dependent on
         // the oder specified in the config file.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31',
+            self::START_DATE,
+            self::END_DATE,
             'person',
             'job_count'
         );
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
-  COALESCE(SUM(CASE duration.id WHEN 201600357 THEN agg.running_job_count ELSE agg.started_job_count END), 0) AS running_job_count,
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id,
-  person.short_name,
-  person.long_name,
-  person.order_id
-ORDER BY person.order_id ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query group by and main statistic');
+        $this->runQueryStringTest(
+            $query->getQueryString(),
+            [
+                'group_bys' => ['person'],
+                'stats' => ['all']
+            ]
+        );
     }
 
     /**
@@ -191,34 +284,18 @@ SQL;
         // available statistics. Note that the order of the statistics in the query are dependent on
         // the oder specified in the config file.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31',
+            self::START_DATE,
+            self::END_DATE,
             null,
             'job_count'
         );
-
-        $generated = $query->getQueryString();
-
-        // The query have have optional group by, order by, and limit fields. Due to the way it is
-        // constructed, the blank line at the end of the query is required if none of these are
-        // present.
-
-        $expected  =<<<SQL
-SELECT
-  COALESCE(SUM(CASE duration.id WHEN 201600357 THEN agg.running_job_count ELSE agg.started_job_count END), 0) AS running_job_count,
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query main statistic no group by');
+        $this->runQueryStringTest(
+            $query->getQueryString(),
+            ['stats' => ['all']]
+        );
     }
 
     /**
@@ -227,38 +304,21 @@ SQL;
 
     public function testAggregateQueryAddGroupByAndStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31'
+            self::START_DATE,
+            self::END_DATE
         );
         $query->addGroupBy('person');
         $query->addStat('job_count');
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id,
-  person.short_name,
-  person.long_name,
-  person.order_id
-ORDER BY person.order_id ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query add group by and statistic');
+        $this->runQueryStringTest(
+            $query->getQueryString(),
+            [
+                'group_bys' => ['person'],
+                'stats' => ['job_count']
+            ]
+        );
     }
 
     /**
@@ -267,11 +327,11 @@ SQL;
 
     public function testAggregateQueryWithGroupByAddStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31',
+            self::START_DATE,
+            self::END_DATE,
             'person'
         );
         $query->addStat('job_count');
@@ -285,56 +345,18 @@ SQL;
             'metric'    => 'job_count'
         );
         $query->addOrderByAndSetSortInfo($data_description);
-
-        $generated = $query->getQueryString(10, 0); // Also test limit=10 and offset=0
-        $expected  =<<<SQL
-SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id',
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-GROUP BY person.id,
-  person.short_name,
-  person.long_name,
-  person.order_id
-ORDER BY job_count desc,
-  person.order_id ASC
-LIMIT 10 OFFSET 0
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query with group by add statistic');
-
-        $generated = $query->getCountQueryString();
-        $expected =<<<SQL
-SELECT
-  COUNT(*) AS row_count
-FROM (
-  SELECT
-  SUM(1) AS total
-  FROM
-    modw_aggregates.jobfact_by_day agg,
-    modw.days duration,
-    modw.person person
-  WHERE
-    duration.id = agg.day_id
-    AND agg.day_id between 201600357 and 201700001
-    AND person.id = agg.person_id
-  GROUP BY
-    person.id,
-    person.short_name,
-    person.long_name,
-    person.order_id
-) AS a WHERE a.total IS NOT NULL
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query count with group by add statistic ');
+        $this->runQueryStringTest(
+            $query->getQueryString(10, 0),
+            [
+                'group_bys' => ['person'],
+                'stats' => ['job_count'],
+                'additional_order_bys' => [
+                    'job_count desc',
+                ],
+                'limit' => 10,
+                'offset' => 0
+            ]
+        );
     }
 
     /**
@@ -343,11 +365,11 @@ SQL;
 
     public function testAggregateQueryAdditionalJoinConstraint()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31'
+            self::START_DATE,
+            self::END_DATE
         );
         $query->addGroupBy('queue');
         $query->addStat('job_count');
@@ -361,30 +383,16 @@ SQL;
             'metric'    => 'job_count'
         );
         $query->addOrderByAndSetSortInfo($data_description);
-
-
-        $generated = $query->getQueryString();
-        $expected  =<<<SQL
-SELECT
-  queue.id as 'queue_id',
-  queue.id as 'queue_short_name',
-  queue.id as 'queue_name',
-  queue.id as 'queue_order_id',
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.queue queue
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND queue.id = agg.queue
-  AND queue.resource_id = agg.task_resource_id
-GROUP BY queue.id
-ORDER BY job_count desc,
-  queue.id ASC
-SQL;
-        $this->assertEquals($expected, $generated, 'Additional join constraint');
+        $this->runQueryStringTest(
+            $query->getQueryString(),
+            [
+                'group_bys' => ['queue'],
+                'stats' => ['job_count'],
+                'additional_order_bys' => [
+                    'job_count desc',
+                ]
+            ]
+        );
     }
 
     /**
@@ -393,11 +401,11 @@ SQL;
 
     public function testAggregateQueryGroupByNone()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31'
+            self::START_DATE,
+            self::END_DATE
         );
         $query->addGroupBy('none');
         $query->addStat('job_count');
@@ -411,24 +419,16 @@ SQL;
             'metric'    => 'job_count'
         );
         $query->addOrderByAndSetSortInfo($data_description);
-        $generated = $query->getQueryString();
-        $expected =<<<SQL
-SELECT
-  -9999 as 'none_id',
-  'Screwdriver' as 'none_short_name',
-  'Screwdriver' as 'none_name',
-  'Screwdriver' as 'none_order_id',
-  COALESCE(SUM(agg.ended_job_count), 0) AS job_count
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-
-ORDER BY job_count desc
-SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query group by none');
+        $this->runQueryStringTest(
+            $query->getQueryString(),
+            [
+                'group_bys' => ['none'],
+                'stats' => ['job_count'],
+                'additional_order_bys' => [
+                    'job_count desc',
+                ]
+            ]
+        );
     }
 
     /**
@@ -438,20 +438,20 @@ SQL;
 
     public function testAggregateQuerySpecifyGroupBy()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31',
+            self::START_DATE,
+            self::END_DATE,
             'person'
         );
         $generated1 = $query->getQueryString();
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31'
+            self::START_DATE,
+            self::END_DATE
         );
         $query->addGroupBy('person');
         $generated2 = $query->getQueryString();
@@ -464,39 +464,23 @@ SQL;
 
     public function testAddWhereJoin()
     {
-        $expected =<<<SQL
-SELECT
-  person.id as 'person_id',
-  person.short_name as 'person_short_name',
-  person.long_name as 'person_name',
-  person.order_id as 'person_order_id'
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person.id = agg.person_id
-  AND person.id > ('constraint')
-GROUP BY person.id,
-  person.short_name,
-  person.long_name,
-  person.order_id
-ORDER BY person.order_id ASC
-SQL;
-
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31',
+            self::START_DATE,
+            self::END_DATE,
             'person'
         );
         $query->addWhereAndJoin('person', '>', 'constraint');
-
-        $generated = $query->getQueryString();
-        $this->assertEquals($expected, $generated, 'AggregateQuery::addWhereJoin()');
+        $this->runQueryStringTest(
+            $query->getQueryString(),
+            [
+                'group_bys' => ['person'],
+                'additional_wheres' => [
+                    "person__person.id > ('constraint')"
+                ]
+            ]
+        );
     }
 
     /**
@@ -506,7 +490,7 @@ SQL;
 
     public function testGetFormula()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Cloud',
             'day',
             '2017-12-01',
@@ -527,11 +511,11 @@ SQL;
 
     public function testAggregateQueryCount()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
-            '2016-12-01',
-            '2017-01-31',
+            self::START_DATE,
+            self::END_DATE,
             'person'
         );
         $query->addStat('job_count');
@@ -544,21 +528,35 @@ FROM (
   SELECT
   SUM(1) AS total
   FROM
-    modw_aggregates.jobfact_by_day agg,
-    modw.days duration,
-    modw.person person
+    %s
   WHERE
-    duration.id = agg.day_id
-    AND agg.day_id between 201600357 and 201700001
-    AND person.id = agg.person_id
+    %s
   GROUP BY
-    person.id,
-    person.short_name,
-    person.long_name,
-    person.order_id
+    %s
 ) AS a WHERE a.total IS NOT NULL
 SQL;
-        $this->assertEquals($expected, $generated, 'Aggregate query count');
+        $froms = implode(
+            ",\n    ",
+            array_merge(
+                self::EXPECTED_SQL['from']['jobs_by_day'],
+                self::EXPECTED_SQL['from']['person'],
+            )
+        );
+        $wheres = implode(
+            "\n    AND ",
+            array_merge(
+                self::EXPECTED_SQL['where']['jobs_by_day'],
+                self::EXPECTED_SQL['where']['person'],
+            )
+        );
+        $groupBys = implode(
+            ",\n    ",
+            self::EXPECTED_SQL['group_by']['person']
+        );
+        $this->assertEquals(
+            sprintf($expected, $froms, $wheres, $groupBys),
+            $generated
+        );
     }
 
     /**
@@ -571,7 +569,7 @@ SQL;
         // Note that calling getDimensionValuesQuery() on a query class that specifies start and end
         // dates will fail due to a hard-coded array index reference.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             null,
@@ -579,19 +577,100 @@ SQL;
             'person'
         );
         $query->addStat('job_count');
-
-        $generated = $query->getDimensionValuesQuery();
+        $this->runQueryStringTest(
+            $query->getDimensionValuesQuery(),
+            [
+                'group_bys' => ['person'],
+                'additional_wheres' => [
+                    "person__person.id > ('constraint')"
+                ]
+            ]
+        );
+        // TODO: Make the code for building the query string its own function
+        // and call it here with a search+replace. Can also use that function
+        // above and do search+replace to indent.
         $expected =<<<SQL
 SELECT
-  person.id AS id,
-  person.long_name AS name,
-  person.short_name AS short_name,
-  person.order_id AS _dimensionOrderValue
-FROM modw.person person
-WHERE person.id IN ( SELECT modw_filters.Jobs_person.person FROM modw_filters.Jobs_person )
-GROUP BY person.id, person.short_name, person.long_name, person.order_id
-ORDER BY person.order_id ASC
+  person__person.id AS id,
+  person__person.long_name AS name,
+  person__person.short_name AS short_name,
+  person__person.order_id AS _dimensionOrderValue
+FROM
+  modw.person person__person
+WHERE
+  person__person.id IN ( SELECT modw_filters.Jobs_person.person FROM modw_filters.Jobs_person )
+GROUP BY
+  person__person.id,
+  person__person.short_name,
+  person__person.long_name,
+  person__person.order_id
+ORDER BY
+  person__person.order_id ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query dimension values');
+    }
+
+    /**
+     * This tests the following properties of a query:
+     * - Two group bys with the same attribute table but different aggregate keys.
+     *   -> Should assign distinct aliases for the two instances of the attribute table.
+     * - Two group bys with the same primary attribute table and aggregate key
+     *   but with different secondary attribute tables.
+     *   -> Should join the primary attribute table to the aggregate table only once
+     *      and each of the two secondary attribute tables should join that one instance
+     *      of the primary attribute table.
+     * - Two group bys with the same primary attribute table, different aggregate keys,
+     *      and the same
+     * Here "primary" means the attribute table that is being joined to the aggregate table.
+     * ++===================================++=============================++
+     * ||               Given               ||           Expect            ||
+     * ++-----------+-----------+-----------++--------------+--------------++
+     * ||  Primary  | Aggregate | Secondary ||    Primary   |  Secondary   ||
+     * || attribute |   keys    | attribute ||   attribute  |  attribute   ||
+     * ||  tables   |           |  tables   ||    tables    |    tables    ||
+     * ++===========+===========+===========++==============+==============++
+     * ||   Same    | Different |   None    || Two distinct |    None      ||
+     * ||           |           |           ||   aliases    |              ||
+     * ++-----------+-----------+-----------||--------------|--------------||
+     * ||   Same    | Different |   Same    || Two distinct | Two distinct ||
+     * ||           |           |           ||   aliases    |   aliases    ||
+     * ++-----------+-----------+-----------||--------------|--------------||
+     * ||   Same    |   Same    |   None    ||    Single    |    None      ||
+     * ||           |           |           ||   instance   |              ||
+     * ++-----------+-----------+-----------||--------------|--------------||
+     * ||   Same    |   Same    | Different ||    Single    | Two distinct ||
+     * ||           |           |           ||   instance   |   aliases    ||
+     * ++-----------+-----------+-----------||--------------|--------------||
+     * ||   Same    |   Same    |   Same    ||    Single    |    Single    ||
+     * ||           |           |           ||   instance   |   instance   ||
+     *
+     * TODO: additional_join_constraints...
+     */
+
+    public function testMultiGroupBySameAttributeTableDifferentGroupByColumn()
+    {
+        $query = new AggregateQuery(
+            'Jobs',
+            'day',
+            self::START_DATE,
+            self::END_DATE,
+            'fieldofscience'
+        );
+        $query->addGroupBy('parentscience');
+
+        $actual = $query->getQueryString();
+        $expected =<<<SQL
+SELECT
+  blah
+FROM
+  blah
+WHERE
+  blah
+GROUP BY
+  blah
+ORDER BY
+  blah
+SQL;
+        $this->assertEquals($expected, $actual);
     }
 }

@@ -200,7 +200,7 @@ class Query extends Loggable
     public function updateVariableStore()
     {
         $this->variableStore->overwrite('QUERY_TYPE', $this->getQueryType());
-        $this->variableStore->overwrite('DATE_TABLE_ID_FIELD', sprintf('%s.id', $this->getDateTable()->getAlias()));
+        $this->variableStore->overwrite('DATE_TABLE_ID_FIELD', sprintf('%s.id', iQuery::DATE_TABLE_ALIAS));
         $this->variableStore->overwrite('MIN_DATE_ID', $this->getMinDateId());
         $this->variableStore->overwrite('MAX_DATE_ID', $this->getMaxDateId());
         $this->variableStore->overwrite('START_DATE_TS', $this->getStartDateTs());
@@ -513,7 +513,7 @@ class Query extends Loggable
 
     public function addGroup(\DataWarehouse\Query\Model\Field $field)
     {
-        $this->_groups[$field->getAlias()->getName()] = $field;
+        $this->_groups[(string)$field] = $field;
     }
     public function getGroups()
     {
@@ -638,7 +638,7 @@ class Query extends Loggable
         $name_field = $select_fields[ sprintf('%s_name', $primaryGroupById) ];
         $short_name_field = $select_fields[ sprintf('%s_short_name', $primaryGroupById) ];
 
-        $groups_str = implode(', ', $groups);
+        $groups_str = implode(",\n  ", $groups);
 
         $orders = $this->getOrders();
         $num_orders = count($orders);
@@ -718,7 +718,7 @@ SQL;
             $dimension_table,
             $restriction_wheres_str,
             $groups_str,
-            ( $orders_exist ? "ORDER BY " . implode(', ', $this->getSelectOrderBy()) : "" )
+            ( $orders_exist ? "ORDER BY\n  " . implode(",\n  ", $this->getSelectOrderBy()) : "" )
         );
 
         $this->logger->debug(
@@ -759,9 +759,9 @@ SQL;
             implode(",\n  ", $select_tables),
             ( "" == $this->getLeftJoinSql() ? "" : "\n" . $this->getLeftJoinSql() ),
             implode("\n  AND ", $wheres),
-            ( count($groups) > 0 ? "GROUP BY " . implode(",\n  ", $groups) : "" ),
+            ( count($groups) > 0 ? "GROUP BY\n  " . implode(",\n  ", $groups) : "" ),
             ( null !== $extraHavingClause ? "\nHAVING $extraHavingClause" : "" ),
-            ( count($select_order_by) > 0 ? "\nORDER BY " . implode(",\n  ", $select_order_by) : "" ),
+            ( count($select_order_by) > 0 ? "\nORDER BY\n  " . implode(",\n  ", $select_order_by) : "" ),
             ( null !== $limit && null !== $offset ? "\nLIMIT $limit OFFSET $offset" : "" )
         );
 
@@ -923,10 +923,6 @@ SQL;
     public function getDataTable()
     {
         return $this->_data_table;
-    }
-    public function getDateTable()
-    {
-        return $this->_date_table;
     }
 
     public function getTitle($group_info_only = false)
@@ -1396,7 +1392,11 @@ SQL;
             return;
         }
 
-        $this->_date_table = new \DataWarehouse\Query\Model\Table(new \DataWarehouse\Query\Model\Schema('modw'), $this->_aggregation_unit.'s', 'duration');
+        $this->_date_table = new \DataWarehouse\Query\Model\Table(
+            new \DataWarehouse\Query\Model\Schema('modw'),
+            $this->_aggregation_unit.'s',
+            iQuery::DATE_TABLE_ALIAS
+        );
 
         $this->addTable($this->_date_table);
 

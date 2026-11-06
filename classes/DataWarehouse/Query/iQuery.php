@@ -11,6 +11,8 @@ use Psr\Log\LoggerInterface;
 
 interface iQuery
 {
+    const DATE_TABLE_ALIAS = 'duration';
+
     /**
      * @param string $realmId The short identifier for the realm that we will be generating data for.
      * @param string $aggregationUnitName The aggregation unit to use for this query (e.g., day,
