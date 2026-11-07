@@ -20,13 +20,6 @@ use Psr\Log\LoggerInterface;
 class GroupBy extends \CCR\Loggable implements iGroupBy
 {
     /**
-     * @var Delimiter used to separate individual column values for attributes with multi-column
-     *   keys.
-     */
-
-    const FILTER_DELIMITER = '^';
-
-    /**
      * @var Realm The realm that this GroupBy belongs to.
      */
 
@@ -748,9 +741,8 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         $db = DB::factory('datawarehouse');
 
         foreach ( $requestFilters as $filterValues ) {
-            $list = explode(self::FILTER_DELIMITER, $filterValues);
             foreach ( $this->attributeToAggregateKeyMap as $aggregateKey ) {
-                $aggregateFilters[$aggregateKey][] = $db->quote(array_shift($list));
+                $aggregateFilters[$aggregateKey][] = $db->quote($filterValues);
             }
         }
 
@@ -803,9 +795,8 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         $db = DB::factory('datawarehouse');
 
         foreach ( $requestFilters as $filterValues ) {
-            $list = explode(self::FILTER_DELIMITER, $filterValues);
             foreach ( $this->attributeToAggregateKeyMap as $attributeKey => $aggregateKey ) {
-                $attributeKeyFilters[$attributeKey][] = $db->quote(array_shift($list));
+                $attributeKeyFilters[$attributeKey][] = $db->quote($filterValues);
             }
         }
 
@@ -1216,9 +1207,8 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         // values of the constraint may be encoded with a delimiter
 
         foreach ( $whereConstraint as $constraint ) {
-            $list = explode(self::FILTER_DELIMITER, $constraint);
             foreach ( $this->attributeToAggregateKeyMap as $attributeKey => $aggregateKey ) {
-                $attributeKeyConstraints[$attributeKey][] = array_shift($list);
+                $attributeKeyConstraints[$attributeKey][] = $constraint;
             }
         }
 
@@ -1290,10 +1280,9 @@ class GroupBy extends \CCR\Loggable implements iGroupBy
         $alias = (isset($queryConfig->joins[0]->alias) ? $queryConfig->joins[0]->alias : $this->attributeTableName);
 
         if ( isset($restrictions['id']) ) {
-            $list = explode(self::FILTER_DELIMITER, $restrictions['id']);
             foreach ( array_keys($this->attributeToAggregateKeyMap) as $attributeKey ) {
                 $whereConditions[] = sprintf('(%s.%s = :%s)', $alias, $attributeKey, $attributeKey);
-                $queryParameters[ sprintf(':%s', $attributeKey) ] = array_shift($list);
+                $queryParameters[ sprintf(':%s', $attributeKey) ] = $restrictions['id'];
             }
         }
 
