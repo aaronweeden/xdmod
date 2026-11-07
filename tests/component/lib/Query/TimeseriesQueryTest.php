@@ -88,7 +88,6 @@ WHERE
   AND person__person.id = agg.person_id
 GROUP BY duration.id,
   DATE(duration.day_start),
-  DATE(duration.day_start),
   duration.day_start_ts,
   person__person.id,
   person__person.short_name,

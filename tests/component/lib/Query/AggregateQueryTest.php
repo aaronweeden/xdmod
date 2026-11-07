@@ -26,7 +26,7 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
             'file' => false,
             'db' => false,
             'mail' => false,
-            'consoleLogLevel' => Logger::EMERG
+            'consoleLogLevel' => Logger::WARNING
         );
         self::$logger = Logger::factory('PHPUnit', $conf);
 
@@ -51,7 +51,7 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
     public function testAggregateQueryNoStatisticNoGroupBy()
     {
         $this->expectException(\Exception::class);
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -67,7 +67,7 @@ class AggregateQueryTest extends \PHPUnit\Framework\TestCase
 
     public function testAggregateQueryNoStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -106,7 +106,7 @@ SQL;
 
     public function testAggregateQueryWithAlternateGroupByColumn()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -129,10 +129,7 @@ WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
   AND username__systemaccount.id = agg.systemaccount_id
-GROUP BY username__systemaccount.username,
-  username__systemaccount.username,
-  username__systemaccount.username,
-  username__systemaccount.username
+GROUP BY username__systemaccount.username
 ORDER BY username__systemaccount.username ASC
 SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query with alternate group by column');
@@ -149,7 +146,7 @@ SQL;
         // available statistics. Note that the order of the statistics in the query are dependent on
         // the oder specified in the config file.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -194,7 +191,7 @@ SQL;
         // available statistics. Note that the order of the statistics in the query are dependent on
         // the oder specified in the config file.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -230,7 +227,7 @@ SQL;
 
     public function testAggregateQueryAddGroupByAndStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -270,7 +267,7 @@ SQL;
 
     public function testAggregateQueryWithGroupByAddStatistic()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -346,7 +343,7 @@ SQL;
 
     public function testAggregateQueryAdditionalJoinConstraint()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -383,10 +380,7 @@ WHERE
   AND agg.day_id between 201600357 and 201700001
   AND queue__queue.id = agg.queue
   AND queue__queue.resource_id = agg.task_resource_id
-GROUP BY queue__queue.id,
-  queue__queue.id,
-  queue__queue.id,
-  queue__queue.id
+GROUP BY queue__queue.id
 ORDER BY job_count desc,
   queue__queue.id ASC
 SQL;
@@ -399,7 +393,7 @@ SQL;
 
     public function testAggregateQueryGroupByNone()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -444,7 +438,7 @@ SQL;
 
     public function testAggregateQuerySpecifyGroupBy()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -453,7 +447,7 @@ SQL;
         );
         $generated1 = $query->getQueryString();
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -492,7 +486,7 @@ GROUP BY person__person.id,
 ORDER BY person__person.order_id ASC
 SQL;
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -512,7 +506,7 @@ SQL;
 
     public function testGetFormula()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Cloud',
             'day',
             '2017-12-01',
@@ -533,7 +527,7 @@ SQL;
 
     public function testAggregateQueryCount()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
@@ -577,7 +571,7 @@ SQL;
         // Note that calling getDimensionValuesQuery() on a query class that specifies start and end
         // dates will fail due to a hard-coded array index reference.
 
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             null,
@@ -601,144 +595,130 @@ SQL;
         $this->assertEquals($expected, $generated, 'Aggregate query dimension values');
     }
 
-    public function testMultiJoin()
+    public function testTwoGroupBysSameTableDifferentColumn()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
             '2017-01-31',
-            'resource'
+            'fieldofscience'
         );
+        $query->addGroupBy('parentscience');
 
         $generated = $query->getQueryString();
         $expected =<<<SQL
 SELECT
-  CONCAT(resource__rf.id, '^', resource__rf.code) as 'resource_id',
-  resource__rf.code as 'resource_short_name',
-  CONCAT(resource__rf.name, '-', resource__rf.code) as 'resource_name',
-  resource__rf.id as 'resource_order_id'
+  fieldofscience__fieldofscience_hierarchy.id as 'fieldofscience_id',
+  fieldofscience__fieldofscience_hierarchy.description as 'fieldofscience_short_name',
+  fieldofscience__fieldofscience_hierarchy.description as 'fieldofscience_name',
+  fieldofscience__fieldofscience_hierarchy.description as 'fieldofscience_order_id',
+  fieldofscience__fieldofscience_hierarchy.parent_id as 'parentscience_id',
+  fieldofscience__fieldofscience_hierarchy.parent_description as 'parentscience_short_name',
+  fieldofscience__fieldofscience_hierarchy.parent_description as 'parentscience_name',
+  fieldofscience__fieldofscience_hierarchy.parent_description as 'parentscience_order_id'
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.resourcefact resource__rf,
-  modw.resourcespecs resource__rs
+  modw.fieldofscience_hierarchy fieldofscience__fieldofscience_hierarchy
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND resource__rf.id = agg.record_resource_id
-  AND resource__rf.code = agg.resource_code
-  AND resource__resourcefact.id = resourcespecs.resource_id
-GROUP BY resource__rf.id,
-  resource__rf.code,
-  resource__rf.code,
-  CONCAT(resource__rf.name, '-', resource__rf.code),
-  resource__rf.id
-ORDER BY resource__rf.code ASC,
-  resource__rf.name ASC
+  AND fieldofscience__fieldofscience_hierarchy.id = agg.fos_id
+GROUP BY fieldofscience__fieldofscience_hierarchy.id,
+  fieldofscience__fieldofscience_hierarchy.description,
+  fieldofscience__fieldofscience_hierarchy.parent_id,
+  fieldofscience__fieldofscience_hierarchy.parent_description
+ORDER BY fieldofscience__fieldofscience_hierarchy.description.code ASC,
+  fieldofscience__fieldofscience_hierarchy.parent_description
 SQL;
         $this->assertEquals($expected, $generated);
     }
 
-    public function testAddSecondGroupBy()
+    public function testMultiGroupBysSameTableDifferentAggregateKeysAndDoubleHops()
     {
-        $query = new \DataWarehouse\Query\AggregateQuery(
+        $query = new AggregateQuery(
             'Jobs',
             'day',
             '2016-12-01',
             '2017-01-31',
-            'person'
+            'institution'
         );
-        $query->addGroupBy('resource');
+        $query->addGroupBy('institution_state');
+        $query->addGroupBy('institution_country');
+        $query->addGroupBy('pi_institution');
+        $query->addGroupBy('pi_institution_state');
+        $query->addGroupBy('pi_institution_country');
 
         $generated = $query->getQueryString();
         $expected =<<<SQL
 SELECT
-  person__person.id as 'person_id',
-  person__person.short_name as 'person_short_name',
-  person__person.long_name as 'person_name',
-  person__person.order_id as 'person_order_id',
-  CONCAT(resource__rf.id, '^', resource__rf.code) as 'resource_id',
-  resource__rf.code as 'resource_short_name',
-  CONCAT(resource__rf.name, '-', resource__rf.code) as 'resource_name',
-  resource__rf.id as 'resource_order_id'
+  institution__organization.id as 'institution_id',
+  institution__organization.short_name as 'institution_short_name',
+  institution__organization.long_name as 'institution_name',
+  institution__organization.id as 'institution_order_id',
+  institution_state__state.id as 'institution_state_id',
+  institution_state__state.name as 'institution_state_short_name',
+  institution_state__state.name as 'institution_state_name',
+  institution_state__state.name as 'institution_state_order_id',
+  institution_country__country.id as 'institution_country_id',
+  institution_country__country.name as 'institution_country_short_name',
+  institution_country__country.name as 'institution_country_name',
+  institution_country__country.name as 'institution_country_order_id',
+  pi_institution__organization.id as 'pi_institution_id',
+  pi_institution__organization.short_name as 'pi_institution_short_name',
+  pi_institution__organization.long_name as 'pi_institution_name',
+  pi_institution__organization.id as 'pi_institution_order_id',
+  pi_institution_state__state.id as 'pi_institution_state_id',
+  pi_institution_state__state.name as 'pi_institution_state_short_name',
+  pi_institution_state__state.name as 'pi_institution_state_name',
+  pi_institution_state__state.name as 'pi_institution_state_order_id',
+  pi_institution_country__country.id as 'pi_institution_country_id',
+  pi_institution_country__country.name as 'pi_institution_country_short_name',
+  pi_institution_country__country.name as 'pi_institution_country_name',
+  pi_institution_country__country.name as 'pi_institution_country_order_id'
 FROM
   modw_aggregates.jobfact_by_day agg,
   modw.days duration,
-  modw.person person__person,
-  modw.resourcefact resource__rf,
-  modw.resourcespecs resource__rs
+  modw.organization institution__organization,
+  modw.state institution_state__state,
+  modw.country institution_country__country,
+  modw.organization pi_institution__organization,
+  modw.state pi_institution_state__state,
+  modw.country pi_institution_country__country
 WHERE
   duration.id = agg.day_id
   AND agg.day_id between 201600357 and 201700001
-  AND person__person.id = agg.person_id
-  AND resource__rf.id = agg.record_resource_id
-  AND resource__rf.code = agg.resource_code
-  AND resource__resourcefact.id = resourcespecs.resource_id
-GROUP BY person__person.id,
-  person__person.short_name,
-  person__person.long_name,
-  person__person.order_id,
-  resource__rf.id,
-  resource__rf.code,
-  resource__rf.code,
-  CONCAT(resource__rf.name, '-', resource__rf.code),
-  resource__rf.id
-ORDER BY person__person.order_id ASC,
-  resource__rf.code ASC,
-  resource__rf.name ASC
+  AND institution__organization.id = agg.person_organization_id
+  AND institution_state__state.id = institution__organization.state_id
+  AND institution_country__country.id = institution__organization.country_id
+  AND pi_institution__organization.id = agg.piperson_organization_id
+  AND pi_institution_state__state.id = pi_institution__organization.state_id
+  AND pi_institution_country__country.id = pi_institution__organization.country_id
+GROUP BY institution__organization.id,
+  institution__organization.short_name,
+  institution__organization.long_name,
+  institution_state__state.id,
+  institution_state__state.name,
+  institution_country__country.id,
+  institution_country__country.name,
+  pi_institution__organization.id,
+  pi_institution__organization.short_name,
+  pi_institution__organization.long_name,
+  pi_institution_state__state.id,
+  pi_institution_state__state.name,
+  pi_institution_country__country.id,
+  pi_institution_country__country.name
+ORDER BY institution__organization.id ASC,
+  institution_state__state.name ASC,
+  institution_country__country.name ASC,
+  pi_institution__organization.id ASC,
+  pi_institution_state__state.name ASC,
+  pi_institution_country__country.name ASC'
 SQL;
         $this->assertEquals($expected, $generated);
     }
 
-    public function testAddTwoGroupBys()
-    {
-        $query = new \DataWarehouse\Query\AggregateQuery(
-            'Jobs',
-            'day',
-            '2016-12-01',
-            '2017-01-31'
-        );
-        $query->addGroupBy('person');
-        $query->addGroupBy('resource');
-
-        $generated = $query->getQueryString();
-        $expected =<<<SQL
-SELECT
-  person__person.id as 'person_id',
-  person__person.short_name as 'person_short_name',
-  person__person.long_name as 'person_name',
-  person__person.order_id as 'person_order_id',
-  CONCAT(resource__rf.id, '^', resource__rf.code) as 'resource_id',
-  resource__rf.code as 'resource_short_name',
-  CONCAT(resource__rf.name, '-', resource__rf.code) as 'resource_name',
-  resource__rf.id as 'resource_order_id'
-FROM
-  modw_aggregates.jobfact_by_day agg,
-  modw.days duration,
-  modw.person person__person,
-  modw.resourcefact resource__rf,
-  modw.resourcespecs resource__rs
-WHERE
-  duration.id = agg.day_id
-  AND agg.day_id between 201600357 and 201700001
-  AND person__person.id = agg.person_id
-  AND resource__rf.id = agg.record_resource_id
-  AND resource__rf.code = agg.resource_code
-  AND resource__resourcefact.id = resourcespecs.resource_id
-GROUP BY person__person.id,
-  person__person.short_name,
-  person__person.long_name,
-  person__person.order_id,
-  resource__rf.id,
-  resource__rf.code,
-  resource__rf.code,
-  CONCAT(resource__rf.name, '-', resource__rf.code),
-  resource__rf.id
-ORDER BY person__person.order_id ASC,
-  resource__rf.code ASC,
-  resource__rf.name ASC
-SQL;
-        $this->assertEquals($expected, $generated);
-    }
+    // TODO: Test order of adding group bys
+    // TODO: Add tests of other output besides getQueryString, e.g., getAttributeValues
 }

@@ -513,7 +513,7 @@ class Query extends Loggable
 
     public function addGroup(\DataWarehouse\Query\Model\Field $field)
     {
-        $this->_groups[$field->getAlias()->getName()] = $field;
+        $this->_groups[(string)$field] = $field;
     }
     public function getGroups()
     {
