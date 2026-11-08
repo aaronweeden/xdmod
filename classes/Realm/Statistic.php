@@ -11,7 +11,7 @@ use Psr\Log\LoggerInterface;
 class Statistic extends \CCR\Loggable implements iStatistic
 {
     /**
-     * @var Realm The realm that this GroupBy belongs to.
+     * @var Realm The realm that this Statistic belongs to.
      */
 
     protected $realm = null;
@@ -149,7 +149,7 @@ class Statistic extends \CCR\Loggable implements iStatistic
      *
      * @param string $shortName The short name for this statistic
      * @param stdClass $config An object contaning the configuration specificaiton.
-     * @param Realm $realm Realm object that this GroupBy will belong to.
+     * @param Realm $realm Realm object that this Statistic will belong to.
      * @param LoggerInterface|null $logger A Monolog Logger instance that will be utilized during processing.
      */
 
