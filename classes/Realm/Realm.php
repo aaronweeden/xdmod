@@ -116,13 +116,6 @@ class Realm extends \CCR\Loggable implements iRealm
     protected $statisticConfigs = null;
 
     /**
-     * @var array An associative array of one or more GroupBy objects where the key is the short
-     * identifier and the value is the object.
-     */
-
-    protected $groupBys = array();
-
-    /**
      * @var array An associative array of one or more Statistic objects where the key is the short
      * identifier and the value is the object.
      */
