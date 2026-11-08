@@ -50,7 +50,6 @@ foreach ($roles as $activeRole) {
     if (!$cache_data_found)
     {
         $realms = array();
-        $groupByObjects = array();
 
         $realmObjects = Realms::getRealmObjectsForUser($user);
         $query_descripter_realms = Acls::getQueryDescripters($user);
@@ -80,10 +79,6 @@ foreach ($roles as $activeRole) {
                     $groupByName = $query_descripter->getGroupByName();
                     $group_by_object = $query_descripter->getGroupByInstance();
                     $permittedStatistics = $group_by_object->getRealm()->getStatisticIds();
-
-                    $groupByObjects[$query_descripter_realm . '_' . $groupByName] = array(
-                        'object' => $group_by_object,
-                        'permittedStats' => $permittedStatistics);
                     $realms[$query_descripter_realm]['dimensions'][$groupByName] = array(
                         'text' => $groupByName == 'none' ? 'None' : $group_by_object->getName(),
                         'info' => $group_by_object->getHtmlDescription()
