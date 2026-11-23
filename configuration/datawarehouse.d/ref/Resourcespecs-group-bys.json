@@ -24,16 +24,13 @@
       "$ref": "datawarehouse.d/ref/group-by-common.json#/provider"
   },
   "resource_allocation_type": {
-      "attribute_table_schema": "modw",
-      "attribute_to_aggregate_table_key_map": [
-          {
-              "resource_allocation_type_id": "resource_allocation_type_id"
-          }
-      ],
-      "attribute_values_query": {
+      "query": {
           "joins": [
               {
-                  "name": "resource_allocation_type"
+                  "right_table": "resource_allocation_type",
+                  "right_column": "resource_allocation_type_id",
+                  "left_table": "agg",
+                  "left_column": "resource_allocation_type_id"
               }
           ],
           "orderby": [

@@ -2,77 +2,48 @@
     "configuration": {
         "name": "Instance Type",
         "description_html": "The instance type of a virtual machine.",
-        "attribute_table_schema": "modw_cloud",
-        "alternate_group_by_columns": [
-            "display"
-        ],
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "instance_type_id": "instance_type_id"
-            }
-        ],
         "order": 6,
-        "attribute_values_query": {
+        "query": {
+            "joins": [
+                {
+                    "agg_column": "instance_type_id",
+                    "right_schema": "modw_cloud",
+                    "right_table": "instance_type",
+                    "right_column": "instance_type_id"
+                }
+            ],
             "records": {
                 "id": "display",
                 "short_name": "display",
                 "name": "display",
                 "order_id": "display"
             },
-            "joins": [
-                {
-                    "name": "instance_type"
-                }
-            ],
-            "orderby": [
-                "display"
-            ],
             "query_hint": "DISTINCT"
-        },
-        "attribute_filter_map_query": {
-            "instance_type_id": "SELECT instance_type_id FROM modw_cloud.instance_type WHERE display IN (__filter_values__)"
-        },
-        "attribute_description_query": "SELECT DISTINCT display AS filter_name FROM modw_cloud.instance_type WHERE display IN (__filter_values__) ORDER BY display"
+        }
     },
     "domain": {
-        "alternate_group_by_columns": [
-            "name"
-        ],
-        "attribute_filter_map_query":{
-            "domain_id": "SELECT id FROM modw_cloud.domains WHERE name IN (__filter_values__)"
-        },
-        "attribute_description_query": "SELECT DISTINCT name AS filter_name FROM modw_cloud.domains WHERE name IN (__filter_values__) ORDER BY name",
         "name": "Domain",
         "description_html": "A domain is a high-level container for projects, users and groups",
-        "additional_join_constraints": [
-            {
-                "attribute_expr": "resource_id",
-                "operation": "=",
-                "aggregate_expr": "host_resource_id"
-            }
-        ],
-        "attribute_table_schema": "modw_cloud",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "id": "domain_id"
-            }
-        ],
-        "attribute_values_query": {
+        "query": {
+            "joins": [
+                {
+                    "agg_column": "domain_id",
+                    "right_schema": "modw_cloud",
+                    "right_table": "domains",
+                    "right_column": "id",
+                    "and": {
+                        "agg_column": "host_resource_id",
+                        "right_column": "resource_id"
+                    }
+                }
+            ],
             "records": {
                 "id": "name",
                 "short_name": "name",
                 "name": "name",
                 "order_id": "name"
             },
-            "joins": [
-                {
-                    "name": "domains"
-                }
-            ],
-            "query_hint": "DISTINCT",
-            "orderby": [
-                "name"
-            ]
+            "query_hint": "DISTINCT"
         }
     },
     "none": {
@@ -85,20 +56,16 @@
         "$ref": "datawarehouse.d/ref/group-by-time-period.json#/month"
     },
     "person": {
-        "attribute_table_schema": "modw",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "id": "person_id"
-            }
-        ],
-        "attribute_values_query": {
+        "name": "User",
+        "description_html": "A person on a principal investigator's allocation, able to spin up and manipulate VM instances.",
+        "category": "Administrative",
+        "query": {
             "joins": [
                 {
-                    "name": "person"
+                    "agg_column": "person_id",
+                    "right_table": "person",
+                    "right_column": "id"
                 }
-            ],
-            "orderby": [
-                "order_id"
             ],
             "records": {
                 "id": "id",
@@ -106,33 +73,20 @@
                 "order_id": "order_id",
                 "short_name": "short_name"
             }
-        },
-        "category": "Administrative",
-        "description_html": "A person on a principal investigator's allocation, able to spin up and manipulate VM instances.",
-        "name": "User"
+        }
     },
     "project": {
-        "attribute_table_schema": "modw_cloud",
-        "alternate_group_by_columns": [
-            "display"
-        ],
-        "attribute_filter_map_query": {
-            "account_id": "SELECT account_id FROM modw_cloud.account WHERE display in (__filter_values__)"
-        },
-        "attribute_description_query": "SELECT DISTINCT display AS filter_name FROM modw_cloud.account WHERE display IN (__filter_values__) ORDER BY display",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "account_id": "account_id"
-            }
-        ],
-        "attribute_values_query": {
+        "name": "Project",
+        "description_html": "The project associated with a VM.",
+        "category": "Administrative",
+        "query": {
             "joins": [
                 {
-                    "name": "account"
+                    "agg_column": "account_id",
+                    "right_schema": "modw_cloud",
+                    "right_table": "account",
+                    "right_column": "account_id"
                 }
-            ],
-            "orderby": [
-                "display"
             ],
             "records": {
                 "id": "display",
@@ -140,33 +94,37 @@
                 "order_id": "display",
                 "short_name": "display"
             }
-        },
-        "category": "Administrative",
-        "description_html": "The project associated with a VM.",
-        "name": "Project"
+        }
     },
     "quarter": {
         "$ref": "datawarehouse.d/ref/group-by-time-period.json#/quarter"
     },
     "resource": {
+        "$ref-with-overwrite": "datawarehouse.d/ref/group-by-common.json#/resource",
         "$overwrite": {
-            "attribute_to_aggregate_table_key_map": [
-                {
-                    "id": "host_resource_id"
+            "description_html": "A resource is defined as any infrastructure that hosts virtual machines.",
+            "query": {
+                "$ref-with-overwrite": "datawarehouse.d/ref/group-by-common.json#/resource/query",
+                "$overwrite": {
+                    "joins": [
+                        {
+                            "$ref-with-overwrite": "datawarehouse.d/ref/group-by-common.json#/resource/query/joins/0",
+                            "$overwrite": {
+                                "agg_column": "host_resource_id"
+                            }
+                        }
+                    ]
                 }
-            ],
-            "description_html": "A resource is defined as any infrastructure that hosts virtual machines."
-        },
-        "$ref-with-overwrite": "datawarehouse.d/ref/group-by-common.json#/resource"
+            }
+        }
     },
     "provider": {
-        "attribute_table_schema": "modw",
         "attribute_to_aggregate_table_key_map": [
             {
                 "organization_id": "service_provider"
             }
         ],
-        "attribute_values_query": {
+        "query": {
             "joins": [
                 {
                     "name": "serviceprovider"
@@ -183,24 +141,19 @@
             }
         },
         "description_html": "A service provider is an institution that hosts resources.",
-        "name": "Provider",
         "show_in_catalog": false
     },
     "submission_venue": {
-        "attribute_table_schema": "modw",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "submission_venue_id": "submission_venue_id"
-            }
-        ],
-        "attribute_values_query": {
+        "name": "Submission Venue",
+        "description_html": "The venue that a job or cloud instance was initiated from.",
+        "category": "Administrative",
+        "query": {
             "joins": [
                 {
-                    "name": "submission_venue"
+                    "agg_column": "submission_venue_id",
+                    "right_table": "submission_venue",
+                    "right_column": "submission_venue_id"
                 }
-            ],
-            "orderby": [
-                "order_id"
             ],
             "records": {
                 "id": "submission_venue_id",
@@ -208,15 +161,15 @@
                 "order_id": "order_id",
                 "short_name": "display"
             }
-        },
-        "category": "Administrative",
-        "description_html": "The venue that a job or cloud instance was initiated from.",
-        "name": "Submission Venue"
+        }
     },
     "username": {
         "$ref": "datawarehouse.d/ref/group-by-common.json#/username"
     },
     "vm_size": {
+        "name": "VM Size: Cores",
+        "description_html": "A categorization of VM's into discrete groups based on the number of cores used by each VM.",
+        "category": "Administrative",
         "attribute_table_schema": "modw_cloud",
         "attribute_to_aggregate_table_key_map": [
             {
@@ -239,7 +192,6 @@
                 "short_name": "description"
             }
         },
-        "category": "Administrative",
         "chart_options": {
             "dataset_display_type": {
                 "aggregate": "bar",
@@ -247,8 +199,6 @@
             }
         },
         "data_sort_order": null,
-        "description_html": "A categorization of VM's into discrete groups based on the number of cores used by each VM.",
-        "name": "VM Size: Cores"
     },
     "vm_size_memory": {
         "attribute_table_schema": "modw_cloud",

@@ -1256,7 +1256,7 @@ SQL;
     public function addOrderBy($sort_group_or_stat_name, $sort_direction)
     {
         if (isset($this->_group_bys[$sort_group_or_stat_name])) {
-            $this->_group_bys[$sort_group_or_stat_name]->addOrder($this, true, $sort_direction, false);
+            $this->_group_bys[$sort_group_or_stat_name]->addOrder($this, $sort_direction, false);
         } elseif (isset($this->_stat_fields[$sort_group_or_stat_name])) {
             $this->prependOrder(new \DataWarehouse\Query\Model\OrderBy(new \DataWarehouse\Query\Model\Field($sort_group_or_stat_name), $sort_direction, $sort_group_or_stat_name));
         }

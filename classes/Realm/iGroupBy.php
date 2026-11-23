@@ -67,20 +67,6 @@ interface iGroupBy
     public function getAttributeTable($includeSchema = true);
 
     /**
-     * @return array An array of strings containing the key column name(s) in the attribute table.
-     * This is also used to map data between the attribute and aggregate tables.
-     */
-
-    public function getAttributeKeys();
-
-    /**
-     * @return array An array containing the names of the key columns in the aggregate table. This
-     *   is also used to map data between the attribute and aggregate tables.
-     */
-
-    public function getAggregateKeys();
-
-    /**
      * @return string The name of the module that defined this GroupBy. The default is the module
      *   from the parent Realm.
      */
@@ -195,14 +181,11 @@ interface iGroupBy
      * Add an ORDER BY clause to the specified query.
      *
      * @param \DataWarehouse\Query\iQuery $query The query that this GroupBy will be added to.
-     * @param bool $multi_group TRUE if this query can have multiple group bys. This is only set to
-     *   TRUE in Query::addGroupBy() and set to FALSE if a group by/dimension is specified in the
-     *   Query class constructor.
      * @param string $direction The sort order (ASC or DESC)
      * @param boolean $prepend TRUE to insert this ORDER BY at the start of the list
      */
 
-    public function addOrder(\DataWarehouse\Query\iQuery $query, $multi_group = false, $direction = 'ASC', $prepend = false);
+    public function addOrder(\DataWarehouse\Query\iQuery $query, $direction = 'ASC', $prepend = false);
 
     /**
      * Execute the query to retrieve the list of possible values for this descriptive attribute
@@ -221,10 +204,10 @@ interface iGroupBy
 
     /**
      * @return \ETL\DbModel\Query The Query object used to generate SQL for obtaining the values of
-     * the descriptive attribute that this GroupBy represents.
+     * the dimension that this GroupBy represents.
      */
 
-    public function getAttributeValuesQuery();
+    public function getQuery();
 
     /**
      * Accessors used to create usage chart settings in DataWarehouse/Access/Usage.php and

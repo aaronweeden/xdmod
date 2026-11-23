@@ -1,15 +1,12 @@
 {
     "fieldofscience": {
-        "attribute_table_schema": "modw",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "id": "fos_id"
-            }
-        ],
         "attribute_values_query": {
             "joins": [
                 {
-                    "name": "fieldofscience_hierarchy"
+                    "right_table": "fieldofscience_hierarchy",
+                    "right_column": "id",
+                    "left_table": "agg",
+                    "left_column": fos_id
                 }
             ],
             "orderby": [
@@ -27,22 +24,13 @@
         "name": "${HIERARCHY_BOTTOM_LEVEL_LABEL}"
     },
     "nsfdirectorate": {
-        "alternate_group_by_columns": [
-            "directorate_id"
-        ],
-        "attribute_table_schema": "modw",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "id": "fos_id"
-            }
-        ],
-        "attribute_filter_map_query": {
-            "fos_id": "SELECT id FROM modw.fieldofscience_hierarchy WHERE directorate_id IN (__filter_values__)"
-        },
         "attribute_values_query": {
-            "joins": [
+            "query": [
                 {
-                    "name": "fieldofscience_hierarchy"
+                    "right_table": "fieldofscience_hierarchy",
+                    "right_column": "id",
+                    "left_table": "agg",
+                    "left_column": fos_id
                 }
             ],
             "orderby": [
@@ -70,22 +58,13 @@
         "name": "${HIERARCHY_TOP_LEVEL_LABEL}"
     },
     "parentscience": {
-        "alternate_group_by_columns": [
-            "parent_id"
-        ],
-        "attribute_table_schema": "modw",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "id": "fos_id"
-            }
-        ],
-        "attribute_filter_map_query": {
-            "fos_id": "SELECT id FROM modw.fieldofscience_hierarchy WHERE parent_id IN (__filter_values__)"
-        },
-        "attribute_values_query": {
+        "query": {
             "joins": [
                 {
-                    "name": "fieldofscience_hierarchy"
+                    "right_table": "fieldofscience_hierarchy",
+                    "right_column": "id",
+                    "left_table": "agg",
+                    "left_column": "fos_id"
                 }
             ],
             "orderby": [

@@ -1,15 +1,13 @@
 {
     "acronym": {
-        "attribute_table_schema": "modw_gateways",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "proxy_person_id": "person_id"
-            }
-        ],
-        "attribute_values_query": {
+        "query": {
             "joins": [
                 {
-                    "name": "gateway"
+                    "right_schema": "modw_gateways",
+                    "right_table": "gateway",
+                    "right_column": "proxy_person_id",
+                    "left_table": "agg",
+                    "left_column": "person_id"
                 }
             ],
             "orderby": [
@@ -33,16 +31,14 @@
         "$ref": "datawarehouse.d/ref/group-by-hierarchy.json#/fieldofscience"
     },
     "gateway": {
-        "attribute_table_schema": "modw_gateways",
-        "attribute_to_aggregate_table_key_map": [
-            {
-                "proxy_person_id": "person_id"
-            }
-        ],
-        "attribute_values_query": {
+        "query": {
             "joins": [
                 {
-                    "name": "gateway"
+                    "right_schema": "modw_gateways",
+                    "right_table": "gateway",
+                    "right_column": "proxy_person_id",
+                    "left_table": "agg",
+                    "left_column": "person_id"
                 }
             ],
             "orderby": [
