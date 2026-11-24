@@ -7,6 +7,7 @@ use CCR\Log;
 use Configuration\XdmodConfiguration;
 use DataWarehouse\Data\BatchDataset;
 use DataWarehouse\Export\RealmManager;
+use DataWarehouse\Query\TimeseriesQuery;
 use DataWarehouse\Query\Exceptions\AccessDeniedException;
 use Exception;
 use Models\Services\Acls;
@@ -19,6 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Silex\ControllerCollection;
 
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -2147,6 +2149,64 @@ class WarehouseControllerProvider extends BaseControllerProvider
         return new \UserStorage($user, $container);
     }
 
+    public function getMetricsData(Request $request, Application $app)
+    {
+        $user = Tokens::authenticate($request);
+        list($startDate, $endDate) = $this->validateDateParams($request);
+        $realm = $this->getStringParam($request, 'realm', true);
+        self::validateRealmName($realm, Realms::getRealms());
+        $queryDescripters = Acls::getQueryDescripters($user, $realm);
+        if (empty($queryDescripters)) {
+            throw new AccessDeniedException(
+                'Your user account does not have permission to get data'
+                . ' from the requested realm.'
+            );
+        }
+        $statisticsStr = $this->getStringParam($request, 'statistics', true);
+        $statistics = explode(',', $statisticsStr);
+        $groupBysParam = $request->get('group_bys');
+        $badGroupBysParam = false;
+        $groupBys = [];
+        if (!is_array($groupBysParam)) {
+            $badGroupBysParam = true;
+        } else {
+            $allowedGroupByFields = ['id', 'name', 'short_name'];
+            foreach ($groupBysParam as $groupBy => $groupByFieldsStr) {
+                $groupByFields = explode(',', $groupByFieldsStr);
+                if (!empty(array_diff($groupByFields, $allowedGroupByFields))) {
+                    $badGroupByParams = true;
+                    break;
+                }
+                $groupBys[$groupBy] = $groupByFields;
+            }
+        }
+        if ($badGroupBysParam) {
+            throw new BadRequestException(
+                '`group_bys` must be an array whose keys are valid dimensions'
+                . ' and whose values are comma-separated string literals "id",'
+                . ' "name", and/or "short_name".'
+            );
+        }
+        $permittedStats = [];
+        /*foreach ($groupBys as $groupBy) {
+            $permittedStatsForGroupBy = Acls::getPermittedStatistics(
+                $user, $realm, $)
+            array_push($permittedStats)
+        }*/
+        $query = new AggregateQuery(
+            $realm,
+            $aggregationUnit,
+            $startDate,
+            $endDate
+        );
+        foreach ($statistics as $stat) {
+            $query->addStat($stat);
+        }
+        foreach ($groupBys as $groupBy) {
+            $query->addGroupBy($groupBy);
+        }
+    }
+
     /**
      * Endpoint to get rows of raw data from the data warehouse. Requires API
      * token authorization.
@@ -2265,14 +2325,9 @@ class WarehouseControllerProvider extends BaseControllerProvider
         $params = [];
         list(
             $params['start_date'], $params['end_date']
-        ) = $this->validateRawDataDateParams($request);
+        ) = $this->validateDateParams($request);
         $params['realm'] = $this->getStringParam($request, 'realm', true);
-        $allRealmNames = self::getRealmNames(Realms::getRealms());
-        if (!in_array($params['realm'], $allRealmNames)) {
-            throw new BadRequestHttpException(
-                'No realm exists with the requested name.'
-            );
-        }
+        self::validateRealmName($params['realm'], Realms::getRealms());
         $realmManager = new RealmManager();
         $allBatchExportRealms = self::getRealmNames(
             $realmManager->getRealms()
@@ -2299,6 +2354,17 @@ class WarehouseControllerProvider extends BaseControllerProvider
             throw new BadRequestHttpException('Offset must be non-negative.');
         }
         return $params;
+    }
+
+    private static function validateRealmName(
+        string $realm,
+        array $allRealmNames
+    ) {
+        if (!in_array($realm, self::getRealmNames($allRealmNames))) {
+            throw new BadRequestHttpException(
+                'No realm exists with the requested name.'
+            );
+        }
     }
 
     /**
@@ -2434,38 +2500,6 @@ class WarehouseControllerProvider extends BaseControllerProvider
                 throw $e;
             }
         }
-    }
-
-    /**
-     * Validate the `start_date` and `end_date` parameters of the given request
-     * to the raw data endpoint (@see getRawData()).
-     *
-     * @param Request $request
-     * @return array containing the validated start and end dates in Y-m-d
-     *               format.
-     * @throws BadRequestHttpException if the start and/or end dates are not
-     *                                 provided or are not valid ISO 8601 dates
-     *                                 or the end date is less than the start
-     *                                 date.
-     */
-    private function validateRawDataDateParams($request)
-    {
-        $startDate = $this->getDateFromISO8601Param(
-            $request,
-            'start_date',
-            true
-        );
-        $endDate = $this->getDateFromISO8601Param(
-            $request,
-            'end_date',
-            true
-        );
-        if ($endDate < $startDate) {
-            throw new BadRequestHttpException(
-                'End date cannot be less than start date.'
-            );
-        }
-        return [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')];
     }
 
     /**
